@@ -59,5 +59,5 @@ class TestProjectStructure(unittest.TestCase):
                 shutil.copytree('test-plugins', tmp_dir / Path('test-plugins/'))
                 for file in files:
                     shutil.copy2(source_dir / Path(file), tmp_dir / Path('test-plugins/plugins'))
-                path_to_file = tmp_dir + '/' + 'test-plugins/'
+                path_to_file = '/workspace/dapla-source-data-processor-build-scripts/tests/test-plugins/'
                 result = subprocess.run(['pytest'], cwd=path_to_file, check=True)

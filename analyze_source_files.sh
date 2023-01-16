@@ -40,7 +40,7 @@ echo $teamName > /workspace/team_name.txt &&
 
 
 # Install test requirements
-cd pipelines/tests
+cd /workspace/dapla-source-data-processor-build-scripts/tests
 python -m pip install -r requirements.txt
 # Run pytests
 pytest
