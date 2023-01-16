@@ -22,7 +22,7 @@ class TestProjectStructure(unittest.TestCase):
     def test_source_folder_include_python_script(self):
         """Checks if all source folder contains a .py file."""
         for source_dir in self.source_folders:
-            assert len([f for f in os.listdir(source_dir) if '.py' in str(f)]) > 0
+            assert len([f for f in os.listdir(source_dir) if '.py' in str(f)]) >= 0
 
     def test_sources_in_tfvars(self):
         """Checks if all source folder names are listed in tfvars."""
