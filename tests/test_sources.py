@@ -6,8 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Relative path to automation/source_data
-PATH = Path("../..")
+PATH = Path("/workspace/automation/source_data")
 EXCLUDED_PATHS = ['triggers', 'pipelines']
 
 
@@ -56,8 +55,8 @@ class TestProjectStructure(unittest.TestCase):
         for source_dir in self.source_folders:
             files = os.listdir(source_dir)
             with tempfile.TemporaryDirectory() as tmp_dir:
-                shutil.copytree('test-plugins', tmp_dir / Path('test-plugins/'))
+                shutil.copytree('/workspace/dapla-source-data-processor-build-scripts/tests/test-plugins/', tmp_dir / Path('test-plugins/'))
                 for file in files:
                     shutil.copy2(source_dir / Path(file), tmp_dir / Path('test-plugins/plugins'))
-                path_to_file = '/workspace/dapla-source-data-processor-build-scripts/tests/test-plugins/'
-                result = subprocess.run(['pytest'], cwd=path_to_file, check=True)
+                path_to_python_test =  tmp_dir / Path('test-plugins/')
+                result = subprocess.run(['pytest'], cwd=path_to_python_test, check=True)
