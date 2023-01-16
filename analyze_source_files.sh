@@ -45,8 +45,8 @@ python -m pip install -r requirements.txt
 # Run pytests
 pytest
 echo " ## No errors found by pytest"
-cd ../..
 
+cd /workspace/automation/source_data/
 # Check code with pyflakes
 for f in ${source_folders[@]}; do
   cd $f
