@@ -10,7 +10,6 @@ list_dir=(*)
 
 declare -a source_folders
 for f in ${list_dir[@]}; do
-    # Filter out EX1, EX2 and files from list_dir
     if [ -d "$f" ] ; then
         cd $f
         echo "## Found source folder: ${f}"
