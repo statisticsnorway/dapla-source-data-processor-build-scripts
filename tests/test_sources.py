@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 
 PATH = Path("/workspace/automation/source_data")
-EXCLUDED_PATHS = ['triggers', 'pipelines']
 
 
 class TestProjectStructure(unittest.TestCase):
@@ -16,34 +15,25 @@ class TestProjectStructure(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         folders_in_dir = [PATH / Path(f.name) for f in os.scandir(PATH) if f.is_dir()]
-        cls.source_folders = [f for f in folders_in_dir if f.name not in EXCLUDED_PATHS]
+        cls.source_folders = [f for f in folders_in_dir]
 
     def test_source_folder_include_python_script(self):
         """Checks if all source folder contains a .py file."""
         for source_dir in self.source_folders:
-            assert len([f for f in os.listdir(source_dir) if '.py' in str(f)]) >= 0
+            assert len([f for f in os.listdir(source_dir) if '.py' in str(f)]) > 0
 
-    def test_sources_in_tfvars(self):
-        """Checks if all source folder names are listed in tfvars."""
-        with open(PATH / Path('../../terraform.tfvars'), encoding='utf-8') as tfvars:
-            data = tfvars.read()
+    def test_yaml_config_in_source_folder(self):
+        """Check that every source folder has a config.yaml file defining triggers."""
+        for source_dir in self.source_folders:
+            yaml_files = [f for f in os.listdir(source_dir) if 'config.yaml' in str(f)]
+            # Check that config.yaml is in source directory
+            assert len(yaml_files) == 1
 
-        # Find all trigger definitions in tfvars
-        trigger_definitions = re.findall(r'({[a-zA-Z0-9_=\s,"/]*})', data)
-        assert len(trigger_definitions) == len(self.source_folders)
-
-        source_folders_copy = self.source_folders.copy()
-
-        for trigger_definition in trigger_definitions:
-            # Extract source_folder name value from trigger_definition
-            trigger_name = re.findall(r'name\s*=\s*"([a-z/A-Z0-9_-]*)"', trigger_definition)[0]
-            for source_folder in source_folders_copy:
-                # source_folder name should match trigger name
-                if source_folder.name in trigger_name:
-                    source_folders_copy.remove(source_folder)
-                    break
-
-        assert len(source_folders_copy) == 0
+            with open(PATH / source_dir / Path(yaml_files[0])) as yaml:
+                data = yaml.read()
+            # List all folder prefixes from config.yaml
+            folder_prefixs = re.findall(r'(folder_prefix: [a-zA-Z0-9_/-]*)', data)
+            assert len(folder_prefixs) == 1
 
     def test_source_script_main_accepts_args(self):
         """Checks that every source folder plugin has main function and accepts required number of arguments.
@@ -55,8 +45,9 @@ class TestProjectStructure(unittest.TestCase):
         for source_dir in self.source_folders:
             files = os.listdir(source_dir)
             with tempfile.TemporaryDirectory() as tmp_dir:
-                shutil.copytree('/workspace/dapla-source-data-processor-build-scripts/tests/test-plugins/', tmp_dir / Path('test-plugins/'))
+                shutil.copytree('/workspace/dapla-source-data-processor-build-scripts/tests/test-plugins/',
+                                tmp_dir / Path('test-plugins/'))
                 for file in files:
                     shutil.copy2(source_dir / Path(file), tmp_dir / Path('test-plugins/plugins'))
-                path_to_python_test =  tmp_dir / Path('test-plugins/')
-                result = subprocess.run(['pytest'], cwd=path_to_python_test, check=True)
+                path_to_python_test = tmp_dir / Path('test-plugins/')
+                subprocess.run(['pytest'], cwd=path_to_python_test, check=True)
