@@ -1,3 +1,4 @@
 dapla-toolbelt
 pytest
 pyflakes
+PyYAML
