@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+import yaml
 
 PATH = Path("/workspace/automation/source_data")
 
@@ -28,12 +29,11 @@ class TestProjectStructure(unittest.TestCase):
             yaml_files = [f for f in os.listdir(source_dir) if 'config.yaml' in str(f)]
             # Check that config.yaml is in source directory
             assert len(yaml_files) == 1
-
-            with open(PATH / source_dir / Path(yaml_files[0])) as yaml:
-                data = yaml.read()
-            # List all folder prefixes from config.yaml
-            folder_prefixs = re.findall(r'(folder_prefix: [a-zA-Z0-9_/-]*)', data)
-            assert len(folder_prefixs) == 1
+            with open(PATH / source_dir / Path(yaml_files[0]), 'r') as f:
+                data = yaml.safe_load(f)
+            # Check that folder_prefix exclusively contains allowed chars
+            matches = re.findall(r"^[A-Za-z0-9-_./]+$", data['folder_prefix'])
+            assert len(matches) == 1
 
     def test_source_script_main_accepts_args(self):
         """Checks that every source folder plugin has main function and accepts required number of arguments.
