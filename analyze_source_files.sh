@@ -1,8 +1,6 @@
 #!/bin/bash
 # Exit on error
 set -e
-# Folders to exclude
-EX1="pipelines"
 
 # Use source_data folder as cwd
 cd /workspace/automation/source_data/
@@ -12,8 +10,7 @@ list_dir=(*)
 
 declare -a source_folders
 for f in ${list_dir[@]}; do
-  # Filter out EX1, EX2 and files from list_dir
-  if [ -d "$f" ] && [ "$f" != "$EX1" ]; then
+  if [ -d "$f" ]; then
     cd $f
     echo "## Found source folder: ${f}"
     # Add source folders to array
