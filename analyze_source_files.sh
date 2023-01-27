@@ -19,10 +19,6 @@ for f in ${list_dir[@]}; do
   fi
 done
 
-# Save array to workspace to persist data between steps
-# https://cloud.google.com/build/docs/configuring-builds/pass-data-between-steps
-printf "%s\n" "${source_folders[@]}" >/workspace/source_folders.txt
-
 # Extract team name from repo name
 repoName="$REPO_NAME"
 prefix="/"a
@@ -31,11 +27,8 @@ teamName=${repoName#"$prefix"}
 teamName=${teamName%"$suffix"}
 echo "## Using team name: $teamName"
 
-# Store variable team name in workspace to persist data between steps
-echo $teamName >/workspace/team_name.txt &&
-
-  # Install test requirements
-  cd /workspace/dapla-source-data-processor-build-scripts/tests
+# Install test requirements
+cd /workspace/dapla-source-data-processor-build-scripts/tests
 python -m pip install -r requirements.txt
 # Run pytests
 pytest

@@ -27,6 +27,13 @@ teamName=${repoName#"$prefix"}
 teamName=${teamName%"$suffix"}
 echo "## Using team name: $teamName"
 
+# Store variable team name in workspace to persist data between steps
+echo $teamName >/workspace/team_name.txt
+
+# Save array to workspace to persist data between steps
+# https://cloud.google.com/build/docs/configuring-builds/pass-data-between-steps
+printf "%s\n" "${source_folders[@]}" >/workspace/source_folders.txt
+
 # Build and push docker images for each source folder
 for f in ${source_folders[@]}; do
   cd $f
