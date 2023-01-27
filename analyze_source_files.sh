@@ -10,13 +10,13 @@ list_dir=(*)
 
 declare -a source_folders
 for f in ${list_dir[@]}; do
-    if [ -d "$f" ] ; then
-        cd $f
-        echo "## Found source folder: ${f}"
-        # Add source folders to array
-        source_folders+=("$f")
-        cd ..
-    fi
+  if [ -d "$f" ]; then
+    cd $f
+    echo "## Found source folder: ${f}"
+    # Add source folders to array
+    source_folders+=("$f")
+    cd ..
+  fi
 done
 
 # Save array to workspace to persist data between steps
