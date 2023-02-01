@@ -16,7 +16,14 @@ TEAM_NAME=${TEAM_NAME%"$suffix"}
 echo "## Using team name: $TEAM_NAME"
 
 # Get folder name from TRIGGER_NAME
-FOLDER_NAME=${TRIGGER_NAME//cloud-build-pr-/}
+if [[ "$TRIGGER_NAME" == *"cloud-build-pr-"* ]]; then
+  FOLDER_NAME=${TRIGGER_NAME//cloud-build-pr-/}
+fi
+
+if [[ "$TRIGGER_NAME" == *"cloud-build-push-"* ]]; then
+  FOLDER_NAME=${TRIGGER_NAME//cloud-build-push-/}
+fi
+
 echo "## Source folder: $FOLDER_NAME"
 
 # Save variables between steps
