@@ -5,8 +5,6 @@
 # Exit on error
 set -e
 
-source ./get_env_vars.sh
-
 # Install test requirements
 cd /workspace/dapla-source-data-processor-build-scripts/tests
 python -m pip install -r requirements.txt

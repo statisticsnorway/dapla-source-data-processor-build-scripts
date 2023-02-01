@@ -6,8 +6,6 @@
 # Exit on error
 set -e
 
-source ./get_env_vars.sh
-
 # Build and push docker images for each source folder
 cd /workspace/automation/source_data/$FOLDER_NAME
 # Create docker file
