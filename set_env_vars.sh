@@ -18,3 +18,7 @@ echo "## Using team name: $TEAM_NAME"
 # Get folder name from TRIGGER_NAME
 FOLDER_NAME=${TRIGGER_NAME//cloud-build-pr-/}
 echo "## Source folder: $FOLDER_NAME"
+
+# Save variables between steps
+echo $FOLDER_NAME > /workspace/FOLDER_NAME.txt
+echo $TEAM_NAME > /workspace/TEAM_NAME.txt

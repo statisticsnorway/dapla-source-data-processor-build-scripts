@@ -6,6 +6,11 @@
 # Exit on error
 set -e
 
+# Fetch environment variables form disk
+export FOLDER_NAME=$(cat /workspace/FOLDER_NAME.txt)
+export TEAM_NAME=$(cat /workspace/TEAM_NAME.txt)
+
+
 # Build and push docker images for each source folder
 cd /workspace/automation/source_data/$FOLDER_NAME
 # Create docker file
