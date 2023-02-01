@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#
+# Deploys the last version of the source image to cloud run.
 
 # Exit on error
 set -e
