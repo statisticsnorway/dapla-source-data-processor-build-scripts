@@ -5,7 +5,7 @@
 # Exit on error
 set -e
 
-sh /workspace/dapla-source-data-processor-build-scripts/get_env_vars.sh
+source ./get_env_vars.sh
 
 # Update image used by every cloud run for source_folder.
 cd /workspace/automation/source_data/$FOLDER_NAME
