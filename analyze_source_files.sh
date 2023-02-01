@@ -1,8 +1,11 @@
 #!/bin/bash
+
+# This script verifies user supplied scripts for a source using pyflakes and pytest.
+
 # Exit on error
 set -e
 
-./set_env_vars.sh
+sh ./set_env_vars.sh
 
 # Install test requirements
 cd /workspace/dapla-source-data-processor-build-scripts/tests

@@ -1,8 +1,12 @@
 #!/bin/bash
+
+# Copies user supplied script into the plugins folder in the base image(https://github.com/statisticsnorway/dapla-source-data-processor)
+# Then builds and pushes the image to artifact-registry/automation/source_data/TEAM_NAME/FOLDER_NAME
+
 # Exit on error
 set -e
 
-./get_env_vars.sh
+sh ./get_env_vars.sh
 
 # Build and push docker images for each source folder
 cd /workspace/automation/source_data/$FOLDER_NAME

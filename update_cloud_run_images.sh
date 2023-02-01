@@ -1,8 +1,11 @@
 #!/bin/bash
+
+#
+
 # Exit on error
 set -e
 
-./set_env_vars.sh
+sh ./set_env_vars.sh
 
 # Update image used by every cloud run for source_folder.
 cd /workspace/automation/source_data/$FOLDER_NAME

@@ -1,3 +1,12 @@
+#!/bin/bash
+
+# This scripts extracts technical team name and source folder name, from REPO_NAME and TRIGGER_NAME provided by cloud build.
+# The respective values are stored in the environment variables TEAM_NAME and FOLDER_NAME.
+# https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values
+
+# Exit on error
+set -e
+
 # Extract team name from repo name
 repoName="$REPO_NAME"
 prefix="/"a
