@@ -14,7 +14,8 @@ class TestProjectStructure(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         trigger_name_prefix = 'cloud-build-pr-'
-        source_folder = os.environ.get('TRIGGER_NAME').replace(trigger_name_prefix, '')
+        trigger_name = os.environ.get('TRIGGER_NAME')
+        source_folder = re.sub('cloud-build-(pr|push)-', '', trigger_name)
         cls.source_folder_path = Path(f"/workspace/automation/source_data/{source_folder}")
 
     def test_source_folder_include_python_script(self):
