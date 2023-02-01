@@ -1,31 +1,13 @@
 #!/bin/bash
+
+# This script verifies user supplied scripts for a source using pyflakes and pytest.
+
 # Exit on error
 set -e
 
-# Use source_data folder as cwd
-cd /workspace/automation/source_data/
-
-# Array of files/folders in dir
-list_dir=(*)
-
-declare -a source_folders
-for f in ${list_dir[@]}; do
-  if [ -d "$f" ]; then
-    cd $f
-    echo "## Found source folder: ${f}"
-    # Add source folders to array
-    source_folders+=("$f")
-    cd ..
-  fi
-done
-
-# Extract team name from repo name
-repoName="$REPO_NAME"
-prefix="/"a
-suffix="-iac"
-teamName=${repoName#"$prefix"}
-teamName=${teamName%"$suffix"}
-echo "## Using team name: $teamName"
+# Fetch environment variables form disk
+export FOLDER_NAME=$(cat /workspace/FOLDER_NAME.txt)
+export TEAM_NAME=$(cat /workspace/TEAM_NAME.txt)
 
 # Install test requirements
 cd /workspace/dapla-source-data-processor-build-scripts/tests
@@ -33,13 +15,8 @@ python -m pip install -r requirements.txt
 # Run pytests
 pytest
 echo " ## No errors found by pytest"
-
-cd /workspace/automation/source_data/
 # Check code with pyflakes
-for f in ${source_folders[@]}; do
-  cd $f
-  echo "## Checking code with pyflakes: ${f}"
-  pyflakes $psd
-  echo " ## No errors found by pyflakes"
-  cd ..
-done
+cd /workspace/automation/source_data/$FOLDER_NAME
+echo "## Checking code with pyflakes: ${FOLDER_NAME}"
+pyflakes process_source_data.py
+echo " ## No errors found by pyflakes"

@@ -1,47 +1,32 @@
 #!/bin/bash
+
+# Copies user supplied script into the plugins folder in the base image(https://github.com/statisticsnorway/dapla-source-data-processor)
+# Then builds and pushes the image to artifact-registry/automation/source_data/TEAM_NAME/FOLDER_NAME
+
 # Exit on error
 set -e
 
-# Use source_data folder as cwd
-cd /workspace/automation/source_data/
+# Fetch environment variables form disk
+export FOLDER_NAME=$(cat /workspace/FOLDER_NAME.txt)
+export TEAM_NAME=$(cat /workspace/TEAM_NAME.txt)
 
-# Array of files/folders in dir
-list_dir=(*)
-
-declare -a source_folders
-for f in ${list_dir[@]}; do
-  if [ -d "$f" ]; then
-    cd $f
-    echo "## Found source folder: ${f}"
-    # Add source folders to array
-    source_folders+=("$f")
-    cd ..
-  fi
-done
-
-# Extract team name from repo name
-repoName="$REPO_NAME"
-prefix="/"a
-suffix="-iac"
-teamName=${repoName#"$prefix"}
-teamName=${teamName%"$suffix"}
-echo "## Using team name: $teamName"
-
-# Store variable team name in workspace to persist data between steps
-echo $teamName >/workspace/team_name.txt
-
-# Save array to workspace to persist data between steps
-# https://cloud.google.com/build/docs/configuring-builds/pass-data-between-steps
-printf "%s\n" "${source_folders[@]}" >/workspace/source_folders.txt
 
 # Build and push docker images for each source folder
-for f in ${source_folders[@]}; do
-  cd $f
-  # Create docker file
-  echo $'FROM europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/base-image:latest\nCOPY . ./plugins' >Dockerfile
-  echo "## Building image for: ${f}"
-  echo $(docker build . -t europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$teamName/$f:latest)
-  echo "## Pushing image: ${f}"
-  echo $(docker push europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$teamName/$f:latest)
-  cd ..
-done
+cd /workspace/automation/source_data/$FOLDER_NAME
+# Create docker file
+echo $'FROM europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/base-image:latest\nCOPY . ./plugins' >Dockerfile
+
+echo "## Building image for: ${FOLDER_NAME}"
+set +e
+docker build . -t europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$TEAM_NAME/$FOLDER_NAME:latest
+docker_build_ret=$?
+set -e
+if [ $docker_build_ret -ne 0 ]; then exit $docker_build_ret; fi
+
+
+echo "## Pushing image: ${FOLDER_NAME}"
+set +e
+docker push europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$TEAM_NAME/$FOLDER_NAME:latest
+docker_push_ret=$?
+set -e
+if [ $docker_push_ret -ne 0 ]; then exit $docker_push_ret; fi
