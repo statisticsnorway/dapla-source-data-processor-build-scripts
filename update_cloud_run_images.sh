@@ -5,10 +5,6 @@
 # Exit on error
 set -e
 
-# Fetch environment variables form disk
-export FOLDER_NAME=$(cat /workspace/FOLDER_NAME.txt)
-export TEAM_NAME=$(cat /workspace/TEAM_NAME.txt)
-
 # Update image used by every cloud run for source_folder.
 cd /workspace/automation/source_data/$FOLDER_NAME
 echo "## Updating image used by cloud run for: ${FOLDER_NAME}"
