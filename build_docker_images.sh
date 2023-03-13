@@ -9,7 +9,7 @@ set -e
 # Build and push docker images for each source folder
 cd /workspace/automation/source_data/$FOLDER_NAME
 # Create docker file
-echo $'FROM europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/base-image:latest\nCOPY . ./plugins' >Dockerfile
+echo $'FROM europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/base-image:prod\nCOPY . ./plugins' >Dockerfile
 
 echo "## Building image for: ${FOLDER_NAME}"
 set +e
