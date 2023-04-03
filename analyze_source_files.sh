@@ -12,7 +12,7 @@ python -m pip install -r requirements.txt
 pytest
 echo " ## No errors found by pytest"
 # Check code with pyflakes
-cd /workspace/automation/source_data/$FOLDER_NAME
-echo "## Checking code with pyflakes: ${FOLDER_NAME}"
+cd /workspace/automation/source_data/$FOLDER_NAME/$ENV_NAME
+echo "## Checking code with pyflakes: ${FOLDER_NAME} in environment:${ENV_NAME}"
 pyflakes process_source_data.py
 echo " ## No errors found by pyflakes"

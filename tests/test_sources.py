@@ -14,7 +14,8 @@ class TestProjectStructure(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         source_folder = os.environ.get('FOLDER_NAME')
-        cls.source_folder_path = Path(f"/workspace/automation/source_data/{source_folder}")
+        env_name = os.environ.get('ENV_NAME')
+        cls.source_folder_path = Path(f"/workspace/automation/source_data/{source_folder}/{env_name}")
 
     def test_source_folder_include_python_script(self):
         """Checks if source folder contains a .py file."""
