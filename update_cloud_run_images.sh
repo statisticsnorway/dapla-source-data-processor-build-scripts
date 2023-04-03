@@ -6,7 +6,7 @@
 set -e
 
 # Update image used by every cloud run for source_folder.
-cd /workspace/automation/source_data/$FOLDER_NAME/$ENV_NAME
+cd /workspace/automation/source_data/$ENV_NAME/$FOLDER_NAME
 echo "## Updating image used by cloud run for: ${FOLDER_NAME} in environment:${ENV_NAME}"
 
 set +e
