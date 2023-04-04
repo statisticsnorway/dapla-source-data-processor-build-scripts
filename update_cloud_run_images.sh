@@ -10,7 +10,7 @@ cd /workspace/automation/source_data/$ENV_NAME/$FOLDER_NAME
 echo "## Updating image used by cloud run for: ${FOLDER_NAME} in environment:${ENV_NAME}"
 
 set +e
-gcloud run deploy $PROCESSOR_NAME --image europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$TEAM_NAME/$FOLDER_NAME:$ENV_NAME --region europe-north1
+gcloud run deploy $PROCESSOR_NAME --image europe-north1-docker.pkg.dev/artifact-registry-14da/ssb-docker/ssb/statistikktjenester/automation/source_data/$TEAM_NAME/$FOLDER_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
 gcloud_ret=$?
 set -e
 if [ $gcloud_ret -ne 0 ]; then exit $gcloud_ret; fi
