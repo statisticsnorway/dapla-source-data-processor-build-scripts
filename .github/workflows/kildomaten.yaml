@@ -1,0 +1,151 @@
+name: Kildomaten
+
+on:
+  workflow_call:
+
+permissions:
+  contents: "read"
+  id-token: "write"
+
+jobs:
+  fetch_sources:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Confirm Activation of 'source-data-automation'
+        run: |
+          result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("source-data-automation"))')
+
+          if [ -z "$result" ]; then
+              echo "Error: The 'source-data-automation' feature is disabled for all projects."
+              exit 1
+          fi
+      - name: Set output variables
+        id: step_output_variables
+        run: |
+          team=$(yq '.team_uniform_name' "$GITHUB_WORKSPACE/infra/projects.yaml")
+          
+          service_account="gh-actions-${team}@artifact-registry-5n.iam.gserviceaccount.com"
+          echo "service_account=$service_account" >> $GITHUB_OUTPUT
+          
+          base_registry="europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/source_data"
+          echo "base_registry=$base_registry" >> $GITHUB_OUTPUT
+          
+          team_registry="europe-north1-docker.pkg.dev/artifact-registry-5n/${team}-docker/automation/source_data"
+          echo "team_registry=$team_registry" >> $GITHUB_OUTPUT
+          
+          workload_identity_provider="projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
+          echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
+
+
+      - name: Create matrix
+        id: step_create_matrix
+        run: |
+          MATRIX="["
+          first=true
+          
+          for folder in automation/source_data/*/*; do
+          if [ -d "$folder" ]; then
+          [ "$first" = false ] && MATRIX+=','
+          env=$(basename "$(dirname "$folder")")
+          source=$(basename "$folder")
+          MATRIX+="\"$source,$env\""
+          first=false
+          fi
+          done
+          
+          MATRIX+="]"
+          echo "Matrix value: $MATRIX"
+          echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
+    outputs:
+      service_account: ${{steps.step_output_variables.outputs.service_account}}
+      base_registry: ${{steps.step_output_variables.outputs.base_registry}}
+      team_registry: ${{steps.step_output_variables.outputs.team_registry}}
+      workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
+      matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
+
+  test:
+    needs: fetch_sources
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.base_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Pull base image
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
+      - name: Clone test scripts
+        run: |
+          git clone -b v2.1.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+      - name: Run tests for ${{ matrix.source }}
+        run: |
+          MATRIX=${{ matrix.source }}
+          ENV_NAME="${MATRIX##*,}"
+          FOLDER_NAME="${MATRIX%%,*}"
+          echo "Running test for source: $FOLDER_NAME-$ENV_NAME"
+          docker run -v "$(pwd):/workspace" \
+          -w /workspace \
+          -e ENV_NAME="$ENV_NAME" \
+          -e FOLDER_NAME="$FOLDER_NAME" \
+          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
+          dapla-source-data-processor-build-scripts/analyze_source_files.sh
+
+  build_and_push:
+    if: |
+      needs.test.result == 'success'
+    needs: [ fetch_sources, test ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: Login to base registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.base_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Pull base image
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
+      - name: Login to team registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.team_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Build and push image for ${{ matrix.source }}
+        run: |
+          MATRIX=${{ matrix.source }}
+          PROJECT_NAME="${MATRIX##*,}"
+          SOURCE_NAME="${MATRIX%%,*}"
+          echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
+          echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
+          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
+          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
