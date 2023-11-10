@@ -97,8 +97,7 @@ jobs:
       - name: Run tests for ${{ matrix.source }}
         run: |
           MATRIX=${{ matrix.source }}
-          ENV_NAME="${MATRIX##*,}"
-          FOLDER_NAME="${MATRIX%%,*}"
+          IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
           echo "Running test for source: $FOLDER_NAME-$ENV_NAME"
           docker run -v "$(pwd):/workspace" \
           -w /workspace \
@@ -143,8 +142,7 @@ jobs:
       - name: Build and push image for ${{ matrix.source }}
         run: |
           MATRIX=${{ matrix.source }}
-          PROJECT_NAME="${MATRIX##*,}"
-          SOURCE_NAME="${MATRIX%%,*}"
+          IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
           echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
           docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
