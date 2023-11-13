@@ -107,8 +107,7 @@ jobs:
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
 
   build_and_push:
-    if: |
-      needs.test.result == 'success'
+    if: needs.test.result == 'success' && github.event_name == 'push'
     needs: [ fetch_sources, test ]
     runs-on: ubuntu-latest
     strategy:
