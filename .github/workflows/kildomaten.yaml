@@ -59,7 +59,7 @@ jobs:
           
           # Check if the matrix is empty
           if [ "$MATRIX" = "[]" ]; then
-            echo "Error: Could not find any sources.\nThis is most likely caused by issue with the structure of your source"
+            echo "Error: Could not find any sources. This is most likely caused by issue with the structure of your source"
             exit 1
           fi
           
