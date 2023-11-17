@@ -72,7 +72,7 @@ jobs:
       workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
-test:
+  test:
     needs: fetch_sources
     runs-on: ubuntu-latest
     strategy:
