@@ -47,16 +47,22 @@ jobs:
           first=true
           
           for folder in automation/source_data/*/*; do
-          if [ -d "$folder" ]; then
-          [ "$first" = false ] && MATRIX+=','
-          env=$(basename "$(dirname "$folder")")
-          source=$(basename "$folder")
-          MATRIX+="\"$source,$env\""
-          first=false
-          fi
+            if [ -d "$folder" ]; then
+              [ "$first" = false ] && MATRIX+=','
+              env=$(basename "$(dirname "$folder")")
+              source=$(basename "$folder")
+              MATRIX+="\"$source,$env\""
+              first=false
+            fi
           done
-          
           MATRIX+="]"
+          
+          # Check if the matrix is empty
+          if [ "$MATRIX" = "[]" ]; then
+            echo "Error: Could not find any sources.\nThis is most likely caused by issue with the structure of your source"
+            exit 1
+          fi
+          
           echo "Matrix value: $MATRIX"
           echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
     outputs:
@@ -66,7 +72,7 @@ jobs:
       workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
-  test:
+test:
     needs: fetch_sources
     runs-on: ubuntu-latest
     strategy:
