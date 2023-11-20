@@ -47,16 +47,22 @@ jobs:
           first=true
           
           for folder in automation/source_data/*/*; do
-          if [ -d "$folder" ]; then
-          [ "$first" = false ] && MATRIX+=','
-          env=$(basename "$(dirname "$folder")")
-          source=$(basename "$folder")
-          MATRIX+="\"$source,$env\""
-          first=false
-          fi
+            if [ -d "$folder" ]; then
+              [ "$first" = false ] && MATRIX+=','
+              env=$(basename "$(dirname "$folder")")
+              source=$(basename "$folder")
+              MATRIX+="\"$source,$env\""
+              first=false
+            fi
           done
-          
           MATRIX+="]"
+          
+          # Check if the matrix is empty
+          if [ "$MATRIX" = "[]" ]; then
+            echo "Error: Could not find any sources for Kildomaten. Please verify that your source configuration matches the description in the Dapla manual: https://manual.dapla.ssb.no/automatisering.html#konfigurere-en-kilde"
+            exit 1
+          fi
+          
           echo "Matrix value: $MATRIX"
           echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
     outputs:
