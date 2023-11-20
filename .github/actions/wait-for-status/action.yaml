@@ -1,0 +1,80 @@
+name: Wait for statuses
+description: Wait for status checks to be reported as successful, fail if any fail
+inputs:
+  timeout:
+    description: "Seconds to poll statuses before timing out"
+    default: 300
+  sleep_time:
+    description: "Seconds to wait between each poll"
+    default: 5
+  statuses:
+    description: "Newline-delimited list of statuses to wait for (e.g. atlantis/plan: sys\natlantis/plan: dev)"
+    required: true
+  initial_sleep:
+    description: "Seconds to sleep before polling, to give external apps time to report status"
+    default: 10
+  fail_on_destroy:
+    description: "Whether or not to fail if a plan wants to destroy resources"
+    default: true
+runs:
+  using: "composite"
+  steps:
+    - name: Wait for statuses
+      uses: actions/github-script@v6
+      with:
+        script: |
+            // Workaround for: https://github.com/actions/toolkit/issues/1124#issuecomment-1305836110
+            const inputs = ${{ toJSON(inputs) }};  
+
+            // Helper function for sleeping
+            const sleep = async (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
+
+            // Wait for a bit before checking statuses
+            await sleep(parseInt(inputs.initial_sleep));
+
+            const sleepTime = parseInt(inputs.sleep_time);
+
+            const statuses = inputs.statuses.split('\n').map(s => s.trim()).filter(s => s != "");
+            const stop = Date.now() + parseInt(inputs.timeout) * 1000;
+            while (Date.now() < stop) {
+              // Get all reported statuses on PR's head commit
+              // "Combined" means we don't care about the previous states of the statuses
+              // Lastly we filter out only the statuses we want
+              const reported = await github.rest.repos.getCombinedStatusForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.payload.pull_request.head.ref
+              }).then(res => res.data.statuses
+                  .filter(s => statuses.includes(s.context)));
+
+              // Get names (.context) of all failed checks
+              const failures = reported.filter(s => s.state === "failure").map(s => s.context);
+              if (failures.length > 0) {
+                core.setFailed(`Statuses failed: ${failures.join(', ')}`);
+                return;
+              }
+
+              if (inputs.fail_on_destroy) {
+                const plans_with_destroy = reported
+                  .filter(s => s.description.includes("to destroy") && !s.description.includes(" 0 to destroy"));
+                if (plans_with_destroy.length > 0) {
+                  core.setFailed(`Plans with destroy operations: ${plans_with_destroy.join(', ')}`);
+                  return;
+                }
+              }
+
+              // If the number of filtered, successful statuses are more or equal 
+              // to the requested statuses, we have a success.
+              // ?: Should it be == instead of >=?
+              const success = reported.filter(s => s.state === "success").length >= statuses.length;
+              if (success) {
+                return;
+              } 
+
+              const statusOverview = reported.map(s => `${s.context}: ${s.status}`).join('\n')
+              core.info(`Current state of statuses:\n${statusOverview}`)
+            
+              await sleep(sleepTime);
+            }
+            core.setFailed("Timeout reached");
+

@@ -112,9 +112,99 @@ jobs:
           ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
 
-  build_and_push:
+  atlantis_auto_apply:
     if: needs.test.result == 'success' && github.event_name == 'push'
-    needs: [ fetch_sources, test ]
+    needs: [fetch_sources, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Wait for PR Approval
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const maxRetries = 180; // Maximum number of retries
+            const retryInterval = 10000; // Wait time between retries in milliseconds
+
+            // Comment on PR that we are waiting for approval
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: 'Waiting for approval of PR. If not approved within 30 minutes, the action must be restarted.'
+            });
+
+            let isApproved = false;
+            let retries = 0;
+
+            while (!isApproved && retries < maxRetries) {
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+
+              isApproved = reviews.data.some(review => review.state === 'APPROVED');
+
+              if (!isApproved) {
+                if (retries < maxRetries - 1) {
+                  await new Promise(resolve => setTimeout(resolve, retryInterval));
+                }
+                retries++;
+              }
+            }
+
+            if (!isApproved) {
+              core.setFailed('PR has not been approved after waiting.');
+            }
+
+      
+      - name: Plan
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'atlantis plan'
+            })
+      
+      - name: Wait for plan
+        uses: ./.github/actions/wait-for-status
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          statuses: |
+            atlantis/plan
+      
+      - name: Apply
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'atlantis apply'
+            })
+      
+      - name: Wait for apply
+        uses: ./.github/actions/wait-for-status
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          fail_on_destroy: false
+          statuses: |
+            atlantis/apply
+
+  build_and_push:
+    if: needs.test.result == 'success' && needs.atlantis_auto_apply.result == 'success' && github.event_name == 'push'
+    needs: [ fetch_sources, test, atlantis_auto_apply ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
