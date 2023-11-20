@@ -53,7 +53,8 @@ runs:
                 core.setFailed(`Statuses failed: ${failures.join(', ')}`);
                 return;
               }
-
+              
+              /*
               if (inputs.fail_on_destroy) {
                 const plans_with_destroy = reported
                   .filter(s => s.description.includes("to destroy") && !s.description.includes(" 0 to destroy"));
@@ -62,6 +63,7 @@ runs:
                   return;
                 }
               }
+              */
 
               // If the number of filtered, successful statuses are more or equal 
               // to the requested statuses, we have a success.

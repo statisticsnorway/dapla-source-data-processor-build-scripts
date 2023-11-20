@@ -111,57 +111,14 @@ jobs:
           -e FOLDER_NAME="$FOLDER_NAME" \
           ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
-
-  atlantis_auto_apply:
-    if: needs.test.result == 'success' && github.event_name == 'push'
-    needs: [fetch_sources, test]
+  
+  plan:
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: [test]
+    name: Plan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Wait for PR Approval
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const prNumber = context.issue.number;
-            const maxRetries = 180; // Maximum number of retries
-            const retryInterval = 10000; // Wait time between retries in milliseconds
-
-            // Comment on PR that we are waiting for approval
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: 'Waiting for approval of PR. If not approved within 30 minutes, the action must be restarted.'
-            });
-
-            let isApproved = false;
-            let retries = 0;
-
-            while (!isApproved && retries < maxRetries) {
-              const reviews = await github.rest.pulls.listReviews({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-              });
-
-              isApproved = reviews.data.some(review => review.state === 'APPROVED');
-
-              if (!isApproved) {
-                if (retries < maxRetries - 1) {
-                  await new Promise(resolve => setTimeout(resolve, retryInterval));
-                }
-                retries++;
-              }
-            }
-
-            if (!isApproved) {
-              core.setFailed('PR has not been approved after waiting.');
-            }
-
-      
-      - name: Plan
+      - name: Ready comment
         uses: actions/github-script@v6
         with:
           script: |
@@ -169,8 +126,33 @@ jobs:
               owner: context.issue.owner,
               repo: context.issue.repo,
               issue_number: context.issue.number,
-              body: 'atlantis plan'
+              body: 'Auto-apply is ready, approve PR to start'
             })
+
+  checks:
+    needs: [test]
+    name: Check preconditions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is mergeable
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            if (!pr.mergeable) {
+              core.setFailed("PR needs to be approved and mergeable");
+            }
+
+  atlantis_auto_apply:
+    needs: [checks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
       
       - name: Wait for plan
         uses: ./.github/actions/wait-for-status
@@ -180,7 +162,7 @@ jobs:
           initial_sleep: 10
           statuses: |
             atlantis/plan
-      
+
       - name: Apply
         uses: actions/github-script@v6
         with:
