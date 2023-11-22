@@ -135,7 +135,6 @@ jobs:
   checks:
     if: ${{ github.event_name == 'pull_request_review' &&
       github.event.review.state == 'approved' }}
-    needs: [test]
     name: Check preconditions
     runs-on: ubuntu-latest
     steps:
