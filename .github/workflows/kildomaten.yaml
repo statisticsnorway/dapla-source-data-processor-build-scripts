@@ -11,8 +11,27 @@ permissions:
   statuses: "read"
 
 jobs:
+  test_path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check that diff is in automation/**
+        id: "check_diff"
+        run: |
+          # Check for changes in the specific directory compared to the main branch
+          CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
+          
+          # Check if the variable CHANGED_FILES is not empty
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "Error: No changes detected in automation/source_data/ compared to main branch."
+            echo "FILES_CHANGED=false" >> $GITHUB_ENV
+          else
+            echo "FILES_CHANGED=true" >> $GITHUB_ENV
+          fi
+
   fetch_sources:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ steps.check_diff.outputs.FILES_CHANGED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -74,25 +93,6 @@ jobs:
       team_registry: ${{steps.step_output_variables.outputs.team_registry}}
       workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
-
-  test_path:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-      - name: Check that diff is in automation/**
-        id: "check_diff"
-        run: |
-          # Check for changes in the specific directory compared to the main branch
-          CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
-          
-          # Check if the variable CHANGED_FILES is not empty
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "Error: No changes detected in automation/source_data/ compared to main branch."
-            echo "FILES_CHANGED=false" >> $GITHUB_ENV
-          else
-            echo "FILES_CHANGED=true" >> $GITHUB_ENV
-          fi
 
   test:
     if: ${{ steps.check_diff.outputs.FILES_CHANGED == 'true' }}
