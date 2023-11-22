@@ -13,8 +13,6 @@ permissions:
 jobs:
   test_path:
     runs-on: ubuntu-latest
-    outputs:
-      files_changed: ${{ steps.check_diff.outputs.FILES_CHANGED }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -36,6 +34,8 @@ jobs:
           else
             echo "FILES_CHANGED=true" >> "$GITHUB_OUTPUTS"
           fi
+    outputs:
+      files_changed: ${{ steps.check_diff.outputs.FILES_CHANGED }}
 
   fetch_sources:
     if: ${{ needs.test_path.outputs.files_changed }} == 'true'
