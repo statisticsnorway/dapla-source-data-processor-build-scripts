@@ -152,7 +152,7 @@ jobs:
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Review state: ${{ github.event.review.state }}"
-          if [ "$github.event.review.state" != "approved" ]; then
+          if [ "${{ github.event.review.state }}" != "approved" ]; then
             echo "Review state is not approved"
             exit 1
           fi
