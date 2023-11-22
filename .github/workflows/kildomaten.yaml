@@ -29,14 +29,14 @@ jobs:
         run: |
           # Check for changes in the specific directory compared to the main branch
           CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
-          
+
           # Check if the variable CHANGED_FILES is not empty
-          if [ -z "$CHANGED_FILES" ]; then
+          if [ "$(git branch --show-current)" == "main" ]; then
+            echo "Running on main branch"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
+          elif [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
             echo "should_run_fetch_sources=false" >> $GITHUB_OUTPUT
-          elif [ "$(git branch --show-current)" != "main" ]
-            echo "Changes detected in automation/source_data/"
-            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           else
             echo "Changes detected in automation/source_data/"
             echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
