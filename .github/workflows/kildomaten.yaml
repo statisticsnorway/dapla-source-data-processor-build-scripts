@@ -3,13 +3,13 @@ name: Kildomaten
 on:
   workflow_call:
 
-permissions:
-  contents: "read"
-  id-token: "write"
-  issues: "write"
-  pull-requests: "write"
-  checks: "read"
-
+#permissions:
+#  contents: "read"
+#  id-token: "write"
+#  issues: "write"
+#  pull-requests: "write"
+#  checks: "read"
+permissions: write-all
 jobs:
   fetch_sources:
     runs-on: ubuntu-latest
