@@ -6,11 +6,48 @@ on:
 permissions:
   contents: "read"
   id-token: "write"
+  issues: "write"
+  pull-requests: "write"
+  statuses: "read"
 
 jobs:
-  fetch_sources:
+  workflow_gatekeeper:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      
+      - name: Fetch main
+        run: |
+          if [ "$(git branch --show-current)" != "main" ]; then
+            echo "Current branch is not main"
+            git fetch origin main:main
+          fi
 
+      - name: Check that diff is in automation/**
+        id: check_diff_variables
+        run: |
+          # Check for changes in the specific directory compared to the main branch
+          CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
+
+          # Check if the variable CHANGED_FILES is not empty
+          if [ "$(git branch --show-current)" == "main" ]; then
+            echo "Running on main branch"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
+          elif [ -z "$CHANGED_FILES" ]; then
+            echo "Error: No changes detected in automation/source_data/ compared to main branch."
+            echo "should_run_fetch_sources=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in automation/source_data/"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
+          fi
+    outputs:
+      should_run_fetch_sources: ${{steps.check_diff_variables.outputs.should_run_fetch_sources}}
+
+  fetch_sources:
+    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' }}
+    needs: [workflow_gatekeeper]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -73,7 +110,8 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    needs: fetch_sources
+    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' && github.event_name != 'push' }}
+    needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -111,10 +149,84 @@ jobs:
           -e FOLDER_NAME="$FOLDER_NAME" \
           ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
+  
+  plan:
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: [test]
+    name: Plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ready comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'Auto-apply is ready, approve PR to start'
+            })
+
+  checks:
+    if: ${{ github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'approved' }}
+    needs: [test]
+    name: Check preconditions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is mergeable
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            if (!pr.mergeable) {
+              core.setFailed("PR needs to be approved and mergeable");
+            }
+
+  atlantis_auto_apply:
+    needs: [checks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      
+      - name: Wait for plan
+        uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          statuses: |
+            atlantis/plan
+
+      - name: Apply
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'atlantis apply'
+            })
+      
+      - name: Wait for apply
+        uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          fail_on_destroy: false
+          statuses: |
+            atlantis/apply
 
   build_and_push:
-    if: needs.test.result == 'success' && github.event_name == 'push'
-    needs: [ fetch_sources, test ]
+    if: ${{ github.event_name == 'push' }}
+    needs: [ fetch_sources ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
