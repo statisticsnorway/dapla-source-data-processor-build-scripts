@@ -31,7 +31,7 @@ jobs:
           fi
 
   fetch_sources:
-    if: ${{ steps.check_diff.outputs.FILES_CHANGED == 'true' }}
+    if: ${{ test_path.steps.check_diff.outputs.FILES_CHANGED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -95,7 +95,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    if: ${{ steps.check_diff.outputs.FILES_CHANGED == 'true' }}
+    if: ${{ test_path.steps.check_diff.outputs.FILES_CHANGED == 'true' }}
     needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
