@@ -133,6 +133,8 @@ jobs:
             })
 
   checks:
+    if: ${{ github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'approved' }}
     needs: [test]
     name: Check preconditions
     runs-on: ubuntu-latest
@@ -149,14 +151,6 @@ jobs:
             if (!pr.mergeable) {
               core.setFailed("PR needs to be approved and mergeable");
             }
-      - name: log stuff
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Review state: ${{ github.event.review.state }}"
-          if [ "${{ github.event.review.state }}" != "approved" ]; then
-            echo "Review state is not approved"
-            exit 1
-          fi
 
   atlantis_auto_apply:
     needs: [checks]
