@@ -110,7 +110,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true'
+    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true' && ${{ github.event_name != 'push' }}
     needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
