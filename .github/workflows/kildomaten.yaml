@@ -19,7 +19,10 @@ jobs:
       
       - name: Fetch main
         run: |
-          git fetch origin main:main
+          if [ "$(git branch --show-current)" != "main" ]; then
+            echo "Current branch is not main"
+            git fetch origin main:main
+          fi
 
       - name: Check that diff is in automation/**
         id: check_diff_variables
@@ -30,16 +33,19 @@ jobs:
           # Check if the variable CHANGED_FILES is not empty
           if [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
-            echo "files_changed=false" >> $GITHUB_OUTPUT
+            echo "should_run_fetch_sources=false" >> $GITHUB_OUTPUT
+          elif [ "$(git branch --show-current)" != "main" ]
+            echo "Changes detected in automation/source_data/"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           else
             echo "Changes detected in automation/source_data/"
-            echo "files_changed=true" >> $GITHUB_OUTPUT
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           fi
     outputs:
-      files_changed: ${{steps.check_diff_variables.outputs.files_changed}}
+      should_run_fetch_sources: ${{steps.check_diff_variables.outputs.should_run_fetch_sources}}
 
   fetch_sources:
-    if: ${{ needs.test_path.outputs.files_changed }} == 'true'
+    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true'
     needs: [test_path]
     runs-on: ubuntu-latest
     steps:
@@ -104,7 +110,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    if: ${{ needs.test_path.outputs.files_changed }} == 'true'
+    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true'
     needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
@@ -219,8 +225,8 @@ jobs:
             atlantis/apply
 
   build_and_push:
-    if: needs.test.result == 'success' && needs.atlantis_auto_apply.result == 'success' && github.event_name == 'push'
-    needs: [ fetch_sources, test, atlantis_auto_apply ]
+    if: github.event_name == 'push'
+    needs: [ fetch_sources ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
