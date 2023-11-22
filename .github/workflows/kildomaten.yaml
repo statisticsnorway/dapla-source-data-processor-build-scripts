@@ -45,7 +45,7 @@ jobs:
       should_run_fetch_sources: ${{steps.check_diff_variables.outputs.should_run_fetch_sources}}
 
   fetch_sources:
-    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true'
+    if: ${{ needs.test_path.outputs.should_run_fetch_sources == 'true' }}
     needs: [test_path]
     runs-on: ubuntu-latest
     steps:
@@ -110,7 +110,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    if: ${{ needs.test_path.outputs.should_run_fetch_sources }} == 'true' && ${{ github.event_name != 'push' }}
+    if: ${{ needs.test_path.outputs.should_run_fetch_sources == 'true' && github.event_name != 'push' }}
     needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
@@ -225,7 +225,7 @@ jobs:
             atlantis/apply
 
   build_and_push:
-    if: github.event_name == 'push'
+    if: ${{ github.event_name == 'push' }}
     needs: [ fetch_sources ]
     runs-on: ubuntu-latest
     strategy:
