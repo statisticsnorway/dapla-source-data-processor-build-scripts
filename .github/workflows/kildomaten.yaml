@@ -32,10 +32,11 @@ jobs:
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
             echo "FILES_CHANGED=false" >> "$GITHUB_OUTPUTS"
           else
+            echo "Changes detected in automation/source_data/"
             echo "FILES_CHANGED=true" >> "$GITHUB_OUTPUTS"
           fi
     outputs:
-      files_changed: ${{ steps.check_diff.outputs.FILES_CHANGED }}
+      files_changed: ${{ env.files_changed }}
 
   fetch_sources:
     if: ${{ needs.test_path.outputs.files_changed }} == 'true'
