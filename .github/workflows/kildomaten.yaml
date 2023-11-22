@@ -132,12 +132,16 @@ jobs:
             })
 
   checks:
-    if: ${{ github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'approved' }}
+    #if: ${{ github.event_name == 'pull_request_review' &&
+    #  github.event.review.state == 'approved' }}
     needs: [test]
     name: Check preconditions
     runs-on: ubuntu-latest
     steps:
+      - name: log stuff
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Review state: ${{ github.event.review.state }}"
       - name: Check if PR is mergeable
         uses: actions/github-script@v6
         with:
