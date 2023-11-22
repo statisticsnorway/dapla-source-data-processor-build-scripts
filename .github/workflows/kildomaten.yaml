@@ -39,6 +39,7 @@ jobs:
 
   fetch_sources:
     if: ${{ needs.test_path.outputs.files_changed }} == 'true'
+    needs: [test_path]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
