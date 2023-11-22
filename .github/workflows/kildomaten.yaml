@@ -28,12 +28,13 @@ jobs:
           CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
           
           # Check if the variable CHANGED_FILES is not empty
+          files_changed=false
           if [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
-            echo "FILES_CHANGED=false" >> "$GITHUB_OUTPUTS"
+            echo "files_changed=$files_changed" >> "$GITHUB_OUTPUTS"
           else
             echo "Changes detected in automation/source_data/"
-            echo "FILES_CHANGED=true" >> "$GITHUB_OUTPUTS"
+            echo "files_changed=$files_changed" >> "$GITHUB_OUTPUTS"
           fi
     outputs:
       files_changed: ${{ env.files_changed }}
