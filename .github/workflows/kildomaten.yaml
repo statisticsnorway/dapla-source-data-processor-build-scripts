@@ -22,7 +22,7 @@ jobs:
           git fetch origin main:main
 
       - name: Check that diff is in automation/**
-        id: "check_diff"
+        id: check_diff_variables
         run: |
           # Check for changes in the specific directory compared to the main branch
           CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
@@ -31,13 +31,13 @@ jobs:
           files_changed=false
           if [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
-            echo "files_changed=$files_changed" >> "$GITHUB_OUTPUTS"
+            echo "files_changed=$files_changed" >> "$GITHUB_ENV"
           else
             echo "Changes detected in automation/source_data/"
-            echo "files_changed=$files_changed" >> "$GITHUB_OUTPUTS"
+            echo "files_changed=$files_changed" >> "$GITHUB_ENV"
           fi
     outputs:
-      files_changed: ${{steps.check_diff.outputs.files_changed}}
+      files_changed: ${{steps.check_diff_variables.outputs.files_changed}}
 
   fetch_sources:
     if: ${{ needs.test_path.outputs.files_changed }} == 'true'
