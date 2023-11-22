@@ -13,6 +13,8 @@ permissions:
 jobs:
   test_path:
     runs-on: ubuntu-latest
+    outputs:
+      files_changed: ${{ steps.check_diff.outputs.FILES_CHANGED }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -31,7 +33,7 @@ jobs:
           fi
 
   fetch_sources:
-    if: ${{ test_path.steps.check_diff.outputs.FILES_CHANGED == 'true' }}
+    if: ${{ needs.test_path.outputs.files_changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -95,7 +97,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   test:
-    if: ${{ test_path.steps.check_diff.outputs.FILES_CHANGED == 'true' }}
+    if: ${{ needs.test_path.outputs.files_changed == 'true' }}
     needs: [fetch_sources]
     runs-on: ubuntu-latest
     strategy:
