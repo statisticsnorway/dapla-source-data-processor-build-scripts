@@ -37,7 +37,7 @@ jobs:
             echo "files_changed=$files_changed" >> "$GITHUB_OUTPUTS"
           fi
     outputs:
-      files_changed: ${{ env.files_changed }}
+      files_changed: ${{steps.check_diff.outputs.files_changed}}
 
   fetch_sources:
     if: ${{ needs.test_path.outputs.files_changed }} == 'true'
