@@ -32,9 +32,9 @@ jobs:
           # Check if the variable CHANGED_FILES is not empty
           if [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source_data/ compared to main branch."
-            echo "FILES_CHANGED=false" >> $GITHUB_OUTPUTS
+            echo "FILES_CHANGED=false" >> "$GITHUB_OUTPUTS"
           else
-            echo "FILES_CHANGED=true" >> $GITHUB_OUTPUTS
+            echo "FILES_CHANGED=true" >> "$GITHUB_OUTPUTS"
           fi
 
   fetch_sources:
