@@ -18,6 +18,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
+      
+      - name: Fetch main
+        run: |
+          git fetch origin main:main
+
       - name: Check that diff is in automation/**
         id: "check_diff"
         run: |
@@ -157,6 +162,7 @@ jobs:
   checks:
     if: ${{ github.event_name == 'pull_request_review' &&
       github.event.review.state == 'approved' }}
+    needs: [test]
     name: Check preconditions
     runs-on: ubuntu-latest
     steps:
