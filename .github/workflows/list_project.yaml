@@ -10,8 +10,45 @@ permissions:
 
 jobs:
   fetch_sources:
+    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' }}
+    needs: [ workflow_gatekeeper ]
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Create matrix
+        id: step_create_matrix
+        run: |
+          MATRIX="["
+          first=true
 
+          for folder in automation/source_data/*/*; do
+            if [ -d "$folder" ]; then
+              [ "$first" = false ] && MATRIX+=','
+              env=$(basename "$(dirname "$folder")")
+              source=$(basename "$folder")
+              MATRIX+="\"$source,$env\""
+              first=false
+            fi
+          done
+          MATRIX+="]"
+
+          # Check if the matrix is empty
+          if [ "$MATRIX" = "[]" ]; then
+            echo "Error: Could not find any sources for Kildomaten. Please verify that your source configuration matches the description in the Dapla manual: https://manual.dapla.ssb.no/automatisering.html#konfigurere-en-kilde"
+            exit 1
+          fi
+
+          echo "Matrix value: $MATRIX"
+          echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
+    outputs:
+      matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
+
+  get_project:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
     steps:
       - id: "auth"
         name: "Authenticate to Google Cloud"
@@ -25,9 +62,18 @@ jobs:
         with:
           version: '>= 363.0.0'
 
-      - name: 'Use gcloud CLI'
-        run: 'gcloud info'
+      - name: 'Get project name'
+        id: get_project_name
+        run: |
+          export PROJECT_NAME=$(python - <<END
+          display_project_name = "dapla-kildomaten-deploy-test"
+          environment = display_project_name.split("-")[-1]
+          length_of_environment = len(environment)
+          project_name = display_project_name[:1-length_of_environment]
+          print(project_name)
+          END
+          )
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
       - name: List projects Activation of 'source-data-automation'
         run: |
-          PROJECT_NAME=dapla-kildomaten-t
-          gcloud projects list --filter="name:${PROJECT_NAME}" | awk 'NR==2 {print $1}'
+          gcloud projects list --filter="name:${{steps.get_project_name.outputs.PROJECT_NAME}}" | awk 'NR==2 {print $1}'
