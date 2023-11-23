@@ -42,7 +42,7 @@ jobs:
     outputs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
-  get_project:
+  deploy_sources:
     runs-on: ubuntu-latest
     needs: fetch_sources
     strategy:
@@ -61,15 +61,16 @@ jobs:
         with:
           version: '>= 363.0.0'
       - name : 'Set project display name'
-        id: set_project_display_name
+        id: project_metadata
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
           echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
+          echo source_name=$SOURCE_NAME >> $GITHUB_OUTPUT
       - name: 'Get project name'
         id: get_project_name
         env:
-          PROJECT_DISPLAY_NAME: ${{ steps.set_project_display_name.outputs.project_display_name }}
+          PROJECT_DISPLAY_NAME: ${{ steps.project_metadata.outputs.project_display_name }}
         run: |
           import os
           project_display_name = os.getenv("PROJECT_DISPLAY_NAME")
@@ -79,6 +80,23 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
               print(f'project_name={project_name}', file=fh)
         shell: python
-      - name: List projects Activation of 'source-data-automation'
+      - name: Get project id
         run: |
-          gcloud projects list --filter="name:${{steps.get_project_name.outputs.project_name}}" | awk 'NR==2 {print $1}'
+          project_id=$(gcloud projects list --filter="name:${{steps.project_metadata.outputs.project_name}}" | awk 'NR==2 {print $1}')
+          echo project_id=$project_id >> $GITHUB_OUTPUT
+      - name: Output SA email
+        id: output_sa_email
+        env:
+          PROJECT_ID: ${{ steps.project_metadata.outputs.project_id }}
+          SOURCE_NAME: ${{ steps.project_metadata.outputs.source_name }}
+        run: |
+            SA_EMAIL="gha-${SOURCE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+            echo sa_email=$SA_EMAIL >> $GITHUB_OUTPUT
+            echo "sa email: $SA_EMAIL"
+      - id: "auth-project-sa"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: "projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
+          service_account: ${{steps.output_sa_email.outputs.sa_email}}
+          token_format: "access_token"
