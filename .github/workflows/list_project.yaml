@@ -43,7 +43,7 @@ jobs:
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
 
   deploy_sources:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     needs: fetch_sources
     strategy:
