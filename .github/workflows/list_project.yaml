@@ -85,6 +85,7 @@ jobs:
         run: |
           project_id=$(gcloud projects list --filter="name:${{steps.project_metadata.outputs.project_name}}" | awk 'NR==2 {print $1}')
           echo project_id=$project_id >> $GITHUB_OUTPUT
+          echo "project id: $project_id"
       - name: Output SA email
         id: output_sa_email
         env:
