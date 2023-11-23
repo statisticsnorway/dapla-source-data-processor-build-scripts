@@ -60,14 +60,14 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
         with:
           version: '>= 363.0.0'
-      - name : 'Set project display name'
+      - name : 'Output project display name and source name'
         id: source_metadata
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
           echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
           echo source_name=$SOURCE_NAME >> $GITHUB_OUTPUT
-      - name: 'Get project name'
+      - name: 'Output project name'
         id: get_project_name
         env:
           PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
@@ -80,7 +80,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
               print(f'project_name={project_name}', file=fh)
         shell: python
-      - name: Get project id
+      - name: Output project id
         id: get_project_id
         run: |
           project_name=${{steps.get_project_name.outputs.project_name}}
@@ -110,11 +110,12 @@ jobs:
       - name: 'Deploy source: ${{ matrix.source }}'
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+          SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
+          ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
           DISPLAY_TEAM_NAME: "dapla-stat"
         run: |
-          MATRIX=${{ matrix.source }}
-          IFS=',' read -r SOURCE_NAME ENV_NAME <<< "$MATRIX"
           echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
           PROCESSOR_NAME="source-${DISPLAY_TEAM_NAME}-processor"
           AR_REPO_NAME="${DISPLAY_TEAM_NAME}-docker"
-          gcloud run deploy $PROCESSOR_NAME --image europe-north1-docker.pkg.dev/artifact-registry-5n/$AR_REPO_NAME/automation/source_data/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
+          gcloud auth list
+          #gcloud run deploy $PROCESSOR_NAME --image europe-north1-docker.pkg.dev/artifact-registry-5n/$AR_REPO_NAME/automation/source_data/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
