@@ -104,6 +104,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: 'Deploy source: ${{ matrix.source }}'
+        env:
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
