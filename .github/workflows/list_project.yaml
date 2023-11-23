@@ -1,0 +1,33 @@
+name: Kildomaten
+
+on:
+  pull_request:
+
+
+permissions:
+  contents: "read"
+  id-token: "write"
+
+jobs:
+  fetch_sources:
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: "projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
+          service_account: ${{ secrets.TEST_SA }}
+          token_format: "access_token"
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          version: '>= 363.0.0'
+
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+      - name: List projects Activation of 'source-data-automation'
+        run: |
+          PROJECT_NAME=dapla-kildomaten-t
+          gcloud projects list --filter="name:${PROJECT_NAME}" | awk 'NR==2 {print $1}'
