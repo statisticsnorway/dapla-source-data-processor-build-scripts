@@ -65,18 +65,18 @@ jobs:
         id: get_project_name
         run: |
           MATRIX=${{ matrix.source }}
-          IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
-          
+          IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
+          echo PROJECT_DISPLAY_NAME
           export PROJECT_NAME=$(python - <<END
           import os
-          display_project_name = os.getenv("PROJECT_NAME")
-          environment = display_project_name.split("-")[-1]
+          project_display_name = os.getenv("PROJECT_DISPLAY_NAME")
+          environment = project_display_name.split("-")[-1]
           length_of_environment = len(environment)
-          project_name = display_project_name[:1-length_of_environment]
+          project_name = project_display_name[:1-length_of_environment]
           print(project_name)
           END
           )
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
       - name: List projects Activation of 'source-data-automation'
         run: |
-          gcloud projects list --filter="name:${{steps.get_project_name.outputs.project_name}}" | awk 'NR==2 {print $1}'
+          gcloud projects list --filter="name:${{steps.get_project_name.outputs.project_display_name}}" | awk 'NR==2 {print $1}'
