@@ -79,4 +79,4 @@ jobs:
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
       - name: List projects Activation of 'source-data-automation'
         run: |
-          gcloud projects list --filter="name:${{steps.get_project_name.outputs.PROJECT_NAME}}" | awk 'NR==2 {print $1}'
+          gcloud projects list --filter="name:${{steps.get_project_name.outputs.project_name}}" | awk 'NR==2 {print $1}'
