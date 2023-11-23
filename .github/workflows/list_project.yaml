@@ -77,6 +77,7 @@ jobs:
           environment = project_display_name.split("-")[-1]
           length_of_environment = len(environment)
           project_name = project_display_name[:1-length_of_environment]
+          print(project_name)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
               print(f'project_name={project_name}', file=fh)
         shell: python
