@@ -77,7 +77,6 @@ jobs:
           environment = project_display_name.split("-")[-1]
           length_of_environment = len(environment)
           project_name = project_display_name[:1-length_of_environment]
-          print(project_name)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
               print(f'project_name={project_name}', file=fh)
         shell: python
@@ -102,3 +101,10 @@ jobs:
           workload_identity_provider: "projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           service_account: ${{steps.output_sa_email.outputs.sa_email}}
           token_format: "access_token"
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: 'Deploy source: ${{ matrix.source }}'
+        run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
+          ./update_cloud_run_images.sh
