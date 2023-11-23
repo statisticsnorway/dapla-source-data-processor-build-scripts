@@ -81,13 +81,14 @@ jobs:
               print(f'project_name={project_name}', file=fh)
         shell: python
       - name: Get project id
+        id: get_project_id
         run: |
           project_id=$(gcloud projects list --filter="name:${{steps.project_metadata.outputs.project_name}}" | awk 'NR==2 {print $1}')
           echo project_id=$project_id >> $GITHUB_OUTPUT
       - name: Output SA email
         id: output_sa_email
         env:
-          PROJECT_ID: ${{ steps.project_metadata.outputs.project_id }}
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
           SOURCE_NAME: ${{ steps.project_metadata.outputs.source_name }}
         run: |
             SA_EMAIL="gha-${SOURCE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
