@@ -65,8 +65,7 @@ jobs:
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
-          echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_ENV
-        shell: python
+          echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
       - name: 'Get project name'
         id: get_project_name
         env:
