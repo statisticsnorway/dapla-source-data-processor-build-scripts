@@ -101,6 +101,10 @@ jobs:
           workload_identity_provider: "projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           service_account: ${{steps.output_sa_email.outputs.sa_email}}
           token_format: "access_token"
+      - name: 'Set up Cloud SDK with project SA'
+        uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          version: '>= 363.0.0'
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: 'Deploy source: ${{ matrix.source }}'
@@ -110,7 +114,7 @@ jobs:
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME ENV_NAME <<< "$MATRIX"
-          echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment:${ENV_NAME}"
+          echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
           PROCESSOR_NAME="source-${DISPLAY_TEAM_NAME}-processor"
           AR_REPO_NAME="${DISPLAY_TEAM_NAME}-docker"
           gcloud run deploy $PROCESSOR_NAME --image europe-north1-docker.pkg.dev/artifact-registry-5n/$AR_REPO_NAME/automation/source_data/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
