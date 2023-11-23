@@ -61,7 +61,7 @@ jobs:
         with:
           version: '>= 363.0.0'
       - name : 'Set project display name'
-        id: project_metadata
+        id: source_metadata
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
@@ -70,7 +70,7 @@ jobs:
       - name: 'Get project name'
         id: get_project_name
         env:
-          PROJECT_DISPLAY_NAME: ${{ steps.project_metadata.outputs.project_display_name }}
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
         run: |
           import os
           project_display_name = os.getenv("PROJECT_DISPLAY_NAME")
@@ -87,16 +87,14 @@ jobs:
           project_name=${{steps.get_project_name.outputs.project_name}}
           project_id=$(gcloud projects list --filter="name:${project_name}" | awk 'NR==2 {print $1}')
           echo project_id=$project_id >> $GITHUB_OUTPUT
-          echo "project id: $project_id"
       - name: Output SA email
         id: output_sa_email
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
-          SOURCE_NAME: ${{ steps.project_metadata.outputs.source_name }}
+          SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
         run: |
             SA_EMAIL="gha-${SOURCE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
             echo sa_email=$SA_EMAIL >> $GITHUB_OUTPUT
-            echo "sa email: $SA_EMAIL"
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v1.1.1"
