@@ -82,8 +82,10 @@ jobs:
         shell: python
       - name: Get project id
         id: get_project_id
+        needs: get_project_name
         run: |
-          project_id=$(gcloud projects list --filter="name:${{steps.project_metadata.outputs.project_name}}" | awk 'NR==2 {print $1}')
+          project_name=${{steps.project_metadata.outputs.project_name}}
+          project_id=$(gcloud projects list --filter="name:${project_name}" | awk 'NR==2 {print $1}')
           echo project_id=$project_id >> $GITHUB_OUTPUT
           echo "project id: $project_id"
       - name: Output SA email
