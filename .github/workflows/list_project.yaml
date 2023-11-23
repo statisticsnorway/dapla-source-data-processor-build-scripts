@@ -64,8 +64,12 @@ jobs:
       - name: 'Get project name'
         id: get_project_name
         run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
+          
           export PROJECT_NAME=$(python - <<END
-          display_project_name = "dapla-kildomaten-deploy-test"
+          import os
+          display_project_name = os.getenv("PROJECT_NAME")
           environment = display_project_name.split("-")[-1]
           length_of_environment = len(environment)
           project_name = display_project_name[:1-length_of_environment]
