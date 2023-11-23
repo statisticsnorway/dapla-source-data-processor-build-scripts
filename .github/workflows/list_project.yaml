@@ -10,8 +10,6 @@ permissions:
 
 jobs:
   fetch_sources:
-    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' }}
-    needs: [ workflow_gatekeeper ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
