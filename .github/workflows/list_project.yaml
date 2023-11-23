@@ -82,7 +82,6 @@ jobs:
         shell: python
       - name: Get project id
         id: get_project_id
-        needs: [get_project_name]
         run: |
           project_name=${{steps.project_metadata.outputs.project_name}}
           project_id=$(gcloud projects list --filter="name:${project_name}" | awk 'NR==2 {print $1}')
