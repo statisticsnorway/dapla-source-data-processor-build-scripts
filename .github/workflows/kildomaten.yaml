@@ -65,8 +65,8 @@ jobs:
           team=$(yq '.team_uniform_name' "$GITHUB_WORKSPACE/infra/projects.yaml")
           echo "team_name=$team" >> $GITHUB_OUTPUT
           
-          gar_project_id="artifact-registry-5n"
-          service_account="gh-actions-${team}@${gar_project_id}iam.gserviceaccount.com"
+          gar_project_id=${{secrets.GAR_PROJECT_ID }}
+          service_account="gh-actions-${team}@${gar_project_id}.iam.gserviceaccount.com"
           echo "service_account=$service_account" >> $GITHUB_OUTPUT
           
           base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source_data"
@@ -75,10 +75,9 @@ jobs:
           team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source_data"
           echo "team_registry=$team_registry" >> $GITHUB_OUTPUT
           
-          gar_project_number="848539402404"
+          gar_project_number=${{secrets.GAR_PROJECT_NUMBER }}
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
-
 
       - name: Create matrix
         id: step_create_matrix
