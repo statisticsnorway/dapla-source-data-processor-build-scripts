@@ -65,7 +65,7 @@ jobs:
           team=$(yq '.team_uniform_name' "$GITHUB_WORKSPACE/infra/projects.yaml")
           echo "team_name=$team" >> $GITHUB_OUTPUT
           
-          gar_project_id=${{ secrets.GAR_PROJECT_ID }}
+          gar_project_id="artifact-registry-5n"
           service_account="gh-actions-${team}@${gar_project_id}iam.gserviceaccount.com"
           echo "service_account=$service_account" >> $GITHUB_OUTPUT
           
