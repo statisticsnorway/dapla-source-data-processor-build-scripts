@@ -280,6 +280,8 @@ jobs:
       matrix:
         source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v1.1.1"
@@ -336,8 +338,6 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
         with:
           version: '>= 363.0.0'
-      - name: Checkout Repository
-        uses: actions/checkout@v2
       - name: 'Deploy source: ${{ matrix.source }}'
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
