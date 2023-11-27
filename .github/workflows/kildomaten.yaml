@@ -343,9 +343,8 @@ jobs:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
           SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
-          DISPLAY_TEAM_NAME: ${{ needs.fetch_sources.outputs.team_name }}
           TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
         run: |
           echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
-          PROCESSOR_NAME="source-${DISPLAY_TEAM_NAME}-processor"
+          PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
           gcloud run deploy $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
