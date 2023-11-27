@@ -91,7 +91,9 @@ jobs:
             if [ -d "$folder" ]; then
               [ "$first" = false ] && MATRIX+=','
               env=$(basename "$(dirname "$folder")")
-              source=$(basename "$folder")
+              base_name=$(basename "$folder")
+              # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP resources
+              source=$(echo "$base_name" | tr '_' '-')
               MATRIX+="\"$source,$env\""
               first=false
             fi
