@@ -12,11 +12,13 @@ permissions:
 
 jobs:
   workflow_gatekeeper:
+    # This job will check if the workflow should run or not.
+    # This is needed because branches and branches-ignore filters are not supported for pull_request_review events.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      
+
       - name: Fetch main
         run: |
           if [ "$(git branch --show-current)" != "main" ]; then
@@ -63,19 +65,21 @@ jobs:
         id: step_output_variables
         run: |
           team=$(yq '.team_uniform_name' "$GITHUB_WORKSPACE/infra/projects.yaml")
+          echo "team_name=$team" >> $GITHUB_OUTPUT
           
-          service_account="gh-actions-${team}@artifact-registry-5n.iam.gserviceaccount.com"
+          gar_project_id="artifact-registry-5n"
+          service_account="gh-actions-${team}@${gar_project_id}.iam.gserviceaccount.com"
           echo "service_account=$service_account" >> $GITHUB_OUTPUT
           
-          base_registry="europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/source_data"
+          base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source_data"
           echo "base_registry=$base_registry" >> $GITHUB_OUTPUT
           
-          team_registry="europe-north1-docker.pkg.dev/artifact-registry-5n/${team}-docker/automation/source_data"
+          team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source_data"
           echo "team_registry=$team_registry" >> $GITHUB_OUTPUT
           
-          workload_identity_provider="projects/848539402404/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
+          gar_project_number="848539402404"
+          workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
-
 
       - name: Create matrix
         id: step_create_matrix
@@ -87,7 +91,9 @@ jobs:
             if [ -d "$folder" ]; then
               [ "$first" = false ] && MATRIX+=','
               env=$(basename "$(dirname "$folder")")
-              source=$(basename "$folder")
+              base_name=$(basename "$folder")
+              # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP resources
+              source=$(echo "$base_name" | tr '_' '-')
               MATRIX+="\"$source,$env\""
               first=false
             fi
@@ -103,6 +109,7 @@ jobs:
           echo "Matrix value: $MATRIX"
           echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
     outputs:
+      team_name: ${{steps.step_output_variables.outputs.team_name}}
       service_account: ${{steps.step_output_variables.outputs.service_account}}
       base_registry: ${{steps.step_output_variables.outputs.base_registry}}
       team_registry: ${{steps.step_output_variables.outputs.team_registry}}
@@ -149,7 +156,7 @@ jobs:
           -e FOLDER_NAME="$FOLDER_NAME" \
           ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
-  
+
   plan:
     if: ${{ github.event_name == 'pull_request' }}
     needs: [test]
@@ -193,7 +200,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      
+
       - name: Wait for plan
         uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
         with:
@@ -213,7 +220,7 @@ jobs:
               issue_number: context.issue.number,
               body: 'atlantis apply'
             })
-      
+
       - name: Wait for apply
         uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
         with:
@@ -264,3 +271,80 @@ jobs:
           echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
           docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
           docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
+
+  deploy_sources:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    needs: [build_and_push, fetch_sources]
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          version: '>= 363.0.0'
+      - name: 'Output project display name and source name'
+        id: source_metadata
+        run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
+          echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
+          echo source_name=$SOURCE_NAME >> $GITHUB_OUTPUT
+      - name: 'Output project name'
+        id: get_project_name
+        env:
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+        run: |
+          import os
+          project_display_name = os.getenv("PROJECT_DISPLAY_NAME")
+          environment = project_display_name.split("-")[-1]
+          length_of_environment = len(environment)
+          project_name = project_display_name[:1-length_of_environment]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f'project_name={project_name}', file=fh)
+        shell: python
+      - name: Output project id
+        id: get_project_id
+        run: |
+          project_name=${{steps.get_project_name.outputs.project_name}}
+          project_id=$(gcloud projects list --filter="name:${project_name}" | awk 'NR==2 {print $1}')
+          echo project_id=$project_id >> $GITHUB_OUTPUT
+      - name: Output SA email
+        id: output_sa_email
+        env:
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+          SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
+        run: |
+          SA_EMAIL="gha-${SOURCE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+          echo sa_email=$SA_EMAIL >> $GITHUB_OUTPUT
+      - id: "auth-project-sa"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{steps.output_sa_email.outputs.sa_email}}
+          token_format: "access_token"
+      - name: 'Set up Cloud SDK with project SA'
+        uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          version: '>= 363.0.0'
+      - name: 'Deploy source: ${{ matrix.source }}'
+        env:
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+          SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
+          ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+          TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
+        run: |
+          echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
+          PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
+          gcloud run deploy $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
