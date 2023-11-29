@@ -91,9 +91,7 @@ jobs:
             if [ -d "$folder" ]; then
               [ "$first" = false ] && MATRIX+=','
               env=$(basename "$(dirname "$folder")")
-              base_name=$(basename "$folder")
-              # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP resources
-              source=$(echo "$base_name" | tr '_' '-')
+              source=$(basename "$folder")
               MATRIX+="\"$source,$env\""
               first=false
             fi
@@ -298,6 +296,10 @@ jobs:
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
+          
+          # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
+          SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
+          
           echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
           echo source_name=$SOURCE_NAME >> $GITHUB_OUTPUT
       - name: 'Output project name'
