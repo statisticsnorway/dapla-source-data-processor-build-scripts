@@ -74,7 +74,7 @@ jobs:
           base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source_data"
           echo "base_registry=$base_registry" >> $GITHUB_OUTPUT
           
-          team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source_data"
+          team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source-data"
           echo "team_registry=$team_registry" >> $GITHUB_OUTPUT
           
           gar_project_number="848539402404"
@@ -266,7 +266,7 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
-          echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
+          echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
           docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
           docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
 
@@ -347,6 +347,8 @@ jobs:
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
           TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
         run: |
+          # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
+          SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
           PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
           gcloud run deploy $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
