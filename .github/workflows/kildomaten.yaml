@@ -142,7 +142,7 @@ jobs:
         run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
       - name: Clone test scripts
         run: |
-          git clone -b main https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+          git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
       - name: Run tests for ${{ matrix.source }}
         run: |
           MATRIX=${{ matrix.source }}
