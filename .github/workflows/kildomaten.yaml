@@ -266,7 +266,9 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
-          echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
+          echo $'FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main\nCOPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins' > Dockerfile
+          # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
+          SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
           docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
 
