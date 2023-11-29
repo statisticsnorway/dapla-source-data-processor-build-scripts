@@ -30,17 +30,17 @@ jobs:
         id: check_diff_variables
         run: |
           # Check for changes in the specific directory compared to the main branch
-          CHANGED_FILES=$(git diff --name-only main -- automation/source_data/)
+          CHANGED_FILES=$(git diff --name-only main -- automation/source-data/)
 
           # Check if the variable CHANGED_FILES is not empty
           if [ "$(git branch --show-current)" == "main" ]; then
             echo "Running on main branch"
             echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           elif [ -z "$CHANGED_FILES" ]; then
-            echo "Error: No changes detected in automation/source_data/ compared to main branch."
+            echo "Error: No changes detected in automation/source-data/ compared to main branch."
             echo "should_run_fetch_sources=false" >> $GITHUB_OUTPUT
           else
-            echo "Changes detected in automation/source_data/"
+            echo "Changes detected in automation/source-data/"
             echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           fi
     outputs:
@@ -71,7 +71,7 @@ jobs:
           service_account="gh-actions-${team}@${gar_project_id}.iam.gserviceaccount.com"
           echo "service_account=$service_account" >> $GITHUB_OUTPUT
           
-          base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source_data"
+          base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source-data"
           echo "base_registry=$base_registry" >> $GITHUB_OUTPUT
           
           team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source-data"
@@ -87,7 +87,7 @@ jobs:
           MATRIX="["
           first=true
           
-          for folder in automation/source_data/*/*; do
+          for folder in automation/source-data/*/*; do
             if [ -d "$folder" ]; then
               [ "$first" = false ] && MATRIX+=','
               env=$(basename "$(dirname "$folder")")
@@ -267,7 +267,7 @@ jobs:
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
           echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main" > Dockerfile
-          echo "COPY automation/source_data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
+          echo "COPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
