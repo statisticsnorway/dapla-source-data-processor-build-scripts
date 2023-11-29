@@ -12,7 +12,7 @@ Checks Python files for a source to ensure that:
 ## Build
 Builds an image for a source folder in a Dapla team iac repository. The images are pushed to the SSB artifact-registry ssb-docker as shown in the example path below.
 
-```ssb-docker/ssb/statistikktjenester/automation/source_data/example-team/source_folder_name```
+```ssb-docker/ssb/statistikktjenester/automation/source-data/example-team/source_folder_name```
 
 ## Deploy
 Redeploys an image to cloud run, the cloud run instance is named after it`s respective source folder, eg. source-{$source_folder}-processor.
