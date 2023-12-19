@@ -81,6 +81,43 @@ jobs:
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
 
+      - name: Sources deleted
+        id: check_all_sources_deleted
+        run: |
+          # This script handles the special case of allowing automatic apply when deleting the last source.
+          # The 'test' job is required to pass for automatic apply to run. And since 'test' utilizes a matrix strategy
+          # it requires at least one element in it's matrix, for it to execute. When there are no source folders,
+          # the matrix used by tests will be empty. This script sets an output that is used to allow
+          # tests to pass, when the last source is deleted.
+          
+          automation_directory="automation/source-data"
+          echo "all_sources_deleted=false" >> $GITHUB_OUTPUT
+          set +e
+          source_folders=$(ls $automation_directory/* 2>/dev/null)
+          set -e
+          # If no source folder exists (automation/source-data/{ENV}/{SOURCE_FOLDER})
+          # Then no source is configured in the current branch.
+          if [ -z "$source_folders" ]; then
+            echo "No sources folder in current branch"
+            source_in_current_branch="false"
+          else
+            echo "A folder exists and is configured in the current branch. Proceeding as normal."
+            source_in_current_branch="true"
+            exit 0
+          fi
+
+          # Lists all files that have been deleted compared to main in the $automation_directory/{ENV} directory
+          deleted_files=$(git diff --name-only --diff-filter=D main -- "$automation_directory"/*)
+
+          if [ -z "$deleted_files" ] || [ "$source_in_current_branch" == "true" ]; then
+            echo "Either a source folder is present in the current branch or
+             no source folder has been deleted. Proceeding as normal."
+            exit 0
+          else
+            echo "No source folder is present in the current branch, and a source folder has been deleted."
+            echo "all_sources_deleted=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create matrix
         id: step_create_matrix
         run: |
@@ -97,11 +134,15 @@ jobs:
             fi
           done
           MATRIX+="]"
-          
+               
+          # If all sources have been deleted (indicated by 'all_sources_deleted' output being 'true'), 
+          # we add the special keyword 'all_sources_deleted' to the matrix to ensure the 'test' job is triggered.
+          if [ "${{ steps.check_all_sources_deleted.outputs.all_sources_deleted }}" == "true" ]; then
+            MATRIX="[ \"all_sources_deleted\" ]"
           # Check if the matrix is empty
-          if [ "$MATRIX" = "[]" ]; then
-            echo "Error: Could not find any sources for Kildomaten. Please verify that your source configuration matches the description in the Dapla manual: https://manual.dapla.ssb.no/automatisering.html#konfigurere-en-kilde"
-            exit 1
+          elif [ "$MATRIX" == "[]" ]; then
+              echo "Error: Could not find any sources for Kildomaten. Please verify that your source configuration matches the description in the Dapla manual: https://manual.dapla.ssb.no/automatisering.html#konfigurere-en-kilde"
+              exit 1
           fi
           
           echo "Matrix value: $MATRIX"
@@ -113,6 +154,7 @@ jobs:
       team_registry: ${{steps.step_output_variables.outputs.team_registry}}
       workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
+      all_sources_deleted: ${{ steps.check_all_sources_deleted.outputs.all_sources_deleted }}
 
   test:
     if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' && github.event_name != 'push' }}
@@ -124,26 +166,34 @@ jobs:
 
     steps:
       - name: Checkout Repository
+        # Skipping all steps when all sources have been deleted.
+        # This allows the 'test' job to finish successfully.
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         uses: actions/checkout@v2
       - id: "auth"
         name: "Authenticate to Google Cloud"
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         uses: "google-github-actions/auth@v1.1.1"
         with:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
           service_account: ${{ needs.fetch_sources.outputs.service_account }}
           token_format: "access_token"
       - name: Login to registry
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         uses: docker/login-action@v2
         with:
           registry: ${{ needs.fetch_sources.outputs.base_registry }}
           username: "oauth2accesstoken"
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Pull base image
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
       - name: Clone test scripts
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
           git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
       - name: Run tests for ${{ matrix.source }}
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
@@ -230,7 +280,7 @@ jobs:
             atlantis/apply
 
   build_and_push:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' && needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
     needs: [ fetch_sources ]
     runs-on: ubuntu-latest
     strategy:
