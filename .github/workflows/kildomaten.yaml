@@ -81,7 +81,12 @@ jobs:
           gar_project_number="848539402404"
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
-
+      - name: Fetch main
+        run: |
+          if [ "$(git branch --show-current)" != "main" ]; then
+            echo "Current branch is not main"
+            git fetch origin main:main
+          fi
       - name: Sources deleted
         id: check_all_sources_deleted
         run: |
