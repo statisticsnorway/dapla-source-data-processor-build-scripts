@@ -104,24 +104,16 @@ jobs:
           # If no source folder exists (automation/source-data/{ENV}/{SOURCE_FOLDER})
           # Then no source is configured in the current branch.
           if [ -z "$source_folders" ]; then
-            echo "No sources folder in current branch"
-            source_in_current_branch="false"
-          else
-            echo "A folder exists and is configured in the current branch. Proceeding as normal."
-            source_in_current_branch="true"
-            exit 0
-          fi
-
-          # Lists all files that have been deleted compared to main in the $automation_directory/{ENV} directory
-          deleted_files=$(git diff --name-only --diff-filter=D main -- "$automation_directory"/*)
-
-          if [ -z "$deleted_files" ] || [ "$source_in_current_branch" == "true" ]; then
-            echo "Either a source folder is present in the current branch or
-             no source folder has been deleted. Proceeding as normal."
-            exit 0
-          else
-            echo "No source folder is present in the current branch, and a source folder has been deleted."
-            echo "all_sources_deleted=true" >> $GITHUB_OUTPUT
+            # Lists all files that have been deleted compared to main in the $automation_directory/{ENV} directory
+            deleted_files=$(git diff --name-only --diff-filter=D main -- "$automation_directory"/*)
+  
+            if [ -z "$deleted_files" ]; then
+              echo "Either a source folder is present in the current branch or
+               no source folder has been deleted. Proceeding as normal."
+            else
+              echo "No source folder is present in the current branch, and a source folder has been deleted."
+              echo "all_sources_deleted=true" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Create matrix
