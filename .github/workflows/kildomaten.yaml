@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Fetch main
         run: |
@@ -51,8 +51,9 @@ jobs:
     needs: [workflow_gatekeeper]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Confirm Activation of 'source-data-automation'
         run: |
           result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("source-data-automation"))')
@@ -169,7 +170,7 @@ jobs:
         # Skipping all steps when all sources have been deleted.
         # This allows the 'test' job to finish successfully.
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - id: "auth"
         name: "Authenticate to Google Cloud"
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
@@ -247,7 +248,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Wait for plan
         uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
@@ -289,7 +290,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v1.1.1"
@@ -333,7 +334,7 @@ jobs:
         source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v1.1.1"
