@@ -387,7 +387,7 @@ jobs:
           # The last part of PROJECT_DISPLAY_NAME contains the lowercase env name.
           # This extracts it, convert it to uppercase and set it as the output dapla_environment.
           LOWERCASE_ENV_SHORT_NAME="${PROJECT_DISPLAY_NAME##*-}"
-          UPPERCASE_ENV_SHORT_NAME="${LOWERCASE_ENV_SHORT_NAME:u}"
+          UPPERCASE_ENV_SHORT_NAME="$(echo "$LOWERCASE_ENV_SHORT_NAME" | awk '{print toupper($0)}')"
           echo dapla_environment=$UPPERCASE_ENV_SHORT_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
