@@ -412,4 +412,4 @@ jobs:
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
           PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
-          gcloud run deploy --set-env-vars="DAPLA_ENVIRONMENT=$DAPLA_ENVIRONMENT" --set-env-vars="DAPLA_REGION=CLOUD_RUN" $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
+          gcloud run deploy --update-env-vars="DAPLA_ENVIRONMENT=$DAPLA_ENVIRONMENT" --update-env-vars="DAPLA_REGION=CLOUD_RUN" $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
