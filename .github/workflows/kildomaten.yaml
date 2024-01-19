@@ -382,11 +382,11 @@ jobs:
       - name: Output dapla_environment
         id: output_dapla_environment
         env:
-          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
         run: |
-          # The last part of project ID contains the lowercase env name.
+          # The last part of PROJECT_DISPLAY_NAME contains the lowercase env name.
           # This extracts it, convert it to uppercase and set it as the output dapla_environment.
-          LOWERCASE_ENV_SHORT_NAME="${$PROJECT_ID##*_}"
+          LOWERCASE_ENV_SHORT_NAME="${PROJECT_DISPLAY_NAME##*-}"
           UPPERCASE_ENV_SHORT_NAME="${LOWERCASE_ENV_SHORT_NAME:u}"
           echo dapla_environment=$UPPERCASE_ENV_SHORT_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
