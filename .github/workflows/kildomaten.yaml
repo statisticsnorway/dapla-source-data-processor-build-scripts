@@ -379,6 +379,16 @@ jobs:
         run: |
           SA_EMAIL="gha-${SOURCE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
           echo sa_email=$SA_EMAIL >> $GITHUB_OUTPUT
+      - name: Output dapla_environment
+        id: output_dapla_environment
+        env:
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+        run: |
+          # The last part of PROJECT_DISPLAY_NAME contains the lowercase env name.
+          # This extracts it, convert it to uppercase and set it as the output dapla_environment.
+          LOWERCASE_ENV_SHORT_NAME="${PROJECT_DISPLAY_NAME##*-}"
+          UPPERCASE_ENV_SHORT_NAME="${LOWERCASE_ENV_SHORT_NAME:u}"
+          echo dapla_environment=$UPPERCASE_ENV_SHORT_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v1.1.1"
@@ -396,9 +406,10 @@ jobs:
           SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
           TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
+          DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
         run: |
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           echo "Updating image used by cloud run for: ${SOURCE_NAME} in environment: ${ENV_NAME}"
           PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
-          gcloud run deploy $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
+          gcloud run deploy --set-env-vars="DAPLA_ENVIRONMENT=$DAPLA_ENVIRONMENT" --set-env-vars="DAPLA_REGION=CLOUD_RUN" $PROCESSOR_NAME --image $TEAM_REGISTRY/$SOURCE_NAME:$ENV_NAME --region europe-north1 --project $PROJECT_ID
