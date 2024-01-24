@@ -413,7 +413,7 @@ jobs:
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
           TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
           DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
-          PROCESSOR_NAME: ${{ steps.output_processor_name.}}
+          PROCESSOR_NAME: ${{ steps.output_processor_name.processor_name }}
         with:
           image: '${{env.TEAM_REGISTRY }}/${{ env.SOURCE_NAME}}:${{ env.ENV_NAME }}'
           service: ${{ env.PROCESSOR_NAME }}
