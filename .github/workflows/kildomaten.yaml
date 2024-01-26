@@ -186,7 +186,7 @@ jobs:
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Pull base image
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION
       - name: Clone test scripts
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
@@ -201,7 +201,7 @@ jobs:
           -w /workspace \
           -e ENV_NAME="$ENV_NAME" \
           -e FOLDER_NAME="$FOLDER_NAME" \
-          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main \
+          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
 
   plan:
@@ -303,7 +303,7 @@ jobs:
           username: "oauth2accesstoken"
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Pull base image
-        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION
       - name: Login to team registry
         uses: docker/login-action@v2
         with:
