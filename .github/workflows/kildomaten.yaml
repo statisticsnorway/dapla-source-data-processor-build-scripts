@@ -3,6 +3,9 @@ name: Kildomaten
 on:
   workflow_call:
 
+env:
+  BASE_IMAGE_VERSION: v0.0.9
+
 permissions:
   contents: "read"
   id-token: "write"
@@ -312,7 +315,7 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
-          echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:main" > Dockerfile
+          echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ BASE_IMAGE_VERSION }}" > Dockerfile
           echo "COPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
