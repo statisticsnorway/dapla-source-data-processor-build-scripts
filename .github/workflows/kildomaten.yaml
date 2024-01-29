@@ -82,6 +82,8 @@ jobs:
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
           
+          # Download version.yaml, this is needed when the workflow is ran from outside the repo
+          curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/main/version.yaml
           base_image_version=$(yq e '.version' version.yaml)
           echo "base_image_version=$base_image_version" >> $GITHUB_OUTPUT
       - name: Fetch main
