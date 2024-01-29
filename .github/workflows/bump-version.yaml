@@ -10,7 +10,6 @@ on:
 permissions:
     contents: write
     id-token: write
-    packages: write
 jobs:
   update-version:
     runs-on: ubuntu-latest
