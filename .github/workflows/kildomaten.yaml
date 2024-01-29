@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 env:
-  BASE_IMAGE_VERSION: v0.0.9
+  BASE_IMAGE_VERSION: v0.0.11
 
 permissions:
   contents: "read"
