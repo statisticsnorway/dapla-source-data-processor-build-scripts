@@ -29,7 +29,7 @@ jobs:
           git config user.email "143391972+dapla-bot[bot]@users.noreply.github.com"
       - name: Update version
         run: |
-            yq e '.env.BASE_IMAGE_VERSION = "${{ github.event.inputs.version }}"' -i .github/workflows/kildomaten.yaml
-            git add .github/workflows/kildomaten.yaml
+            yq e '.version = "${{ github.event.inputs.version }}"' -i version.yaml
+            git add version.yaml
             git commit -m "Use dapla-source-data-processor ${{ github.event.inputs.version }}"
             git push

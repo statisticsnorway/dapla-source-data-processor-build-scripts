@@ -84,6 +84,9 @@ jobs:
           gar_project_number="848539402404"
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
+          
+          base_image_version=$(yq e '.version' version.yaml)
+          echo "base_image_version=$base_image_version" >> $GITHUB_OUTPUT
       - name: Fetch main
         run: |
           if [ "$(git branch --show-current)" != "main" ]; then
@@ -154,6 +157,7 @@ jobs:
       workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
       matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
       all_sources_deleted: ${{ steps.check_all_sources_deleted.outputs.all_sources_deleted }}
+      base_image_version: ${{steps.step_output_variables.outputs.base_image_version}}
 
   test:
     if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' && needs.fetch_sources.outputs.matrix != '[]' }}
@@ -186,7 +190,7 @@ jobs:
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Pull base image
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
       - name: Clone test scripts
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
@@ -201,7 +205,7 @@ jobs:
           -w /workspace \
           -e ENV_NAME="$ENV_NAME" \
           -e FOLDER_NAME="$FOLDER_NAME" \
-          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION \
+          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }} \
           dapla-source-data-processor-build-scripts/analyze_source_files.sh
 
   plan:
@@ -303,7 +307,7 @@ jobs:
           username: "oauth2accesstoken"
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Pull base image
-        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
       - name: Login to team registry
         uses: docker/login-action@v2
         with:
@@ -315,7 +319,7 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
           echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
-          echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:$BASE_IMAGE_VERSION" > Dockerfile
+          echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}" > Dockerfile
           echo "COPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
