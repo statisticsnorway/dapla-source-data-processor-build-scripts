@@ -54,13 +54,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Confirm Activation of 'source-data-automation'
+      - name: Confirm Activation of 'kildomaten'
         run: |
-          result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("source-data-automation"))')
+          result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("kildomaten"))')
 
           if [ -z "$result" ]; then
-              echo "Error: The 'source-data-automation' feature is disabled for all projects."
-              exit 1
+            echo "Error: The 'kildomaten' feature is disabled for all projects."
+            exit 1
           fi
       - name: Set output variables
         id: step_output_variables
