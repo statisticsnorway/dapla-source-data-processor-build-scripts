@@ -1,0 +1,35 @@
+name: Bump version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The new version to use (ex. v0.0.0)'
+        required: true
+
+permissions:
+    contents: write
+    id-token: write
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.DAPLA_BOT_APP_ID }}
+          private-key: ${{ secrets.DAPLA_BOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: refs/heads/main
+      - name: Configure Git user
+        run: |
+          git config user.name "dapla-bot[bot]"
+          git config user.email "143391972+dapla-bot[bot]@users.noreply.github.com"
+      - name: Update version
+        run: |
+            yq e '.version = "${{ github.event.inputs.version }}"' -i version.yaml
+            git add version.yaml
+            git commit -m "Use dapla-source-data-processor ${{ github.event.inputs.version }}"
+            git push

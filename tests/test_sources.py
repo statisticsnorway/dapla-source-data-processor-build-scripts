@@ -16,7 +16,7 @@ class TestProjectStructure(unittest.TestCase):
         source_folder = os.environ.get("FOLDER_NAME")
         env_name = os.environ.get("ENV_NAME")
         cls.source_folder_path = Path(
-            f"/workspace/automation/source_data/{env_name}/{source_folder}"
+            f"/workspace/automation/source-data/{env_name}/{source_folder}"
         )
 
     def test_source_folder_include_python_script(self):

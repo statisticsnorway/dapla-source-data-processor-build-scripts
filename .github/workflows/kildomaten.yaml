@@ -1,0 +1,430 @@
+name: Kildomaten
+
+on:
+  workflow_call:
+
+permissions:
+  contents: "read"
+  id-token: "write"
+  issues: "write"
+  pull-requests: "write"
+  statuses: "read"
+
+jobs:
+  workflow_gatekeeper:
+    # This job will check if the workflow should run or not.
+    # This is needed because branches and branches-ignore filters are not supported for pull_request_review events.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch main
+        run: |
+          if [ "$(git branch --show-current)" != "main" ]; then
+            echo "Current branch is not main"
+            git fetch origin main:main
+          fi
+
+      - name: Check that diff is in automation/**
+        id: check_diff_variables
+        run: |
+          # Check for changes in the specific directory compared to the main branch
+          CHANGED_FILES=$(git diff --name-only main -- automation/source-data/)
+
+          # Check if the variable CHANGED_FILES is not empty
+          if [ "$(git branch --show-current)" == "main" ]; then
+            echo "Running on main branch"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
+          elif [ -z "$CHANGED_FILES" ]; then
+            echo "Error: No changes detected in automation/source-data/ compared to main branch."
+            echo "should_run_fetch_sources=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in automation/source-data/"
+            echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
+          fi
+    outputs:
+      should_run_fetch_sources: ${{steps.check_diff_variables.outputs.should_run_fetch_sources}}
+
+  fetch_sources:
+    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' }}
+    needs: [workflow_gatekeeper]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm Activation of 'kildomaten'
+        run: |
+          result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("kildomaten"))')
+
+          if [ -z "$result" ]; then
+            echo "Error: The 'kildomaten' feature is disabled for all projects."
+            exit 1
+          fi
+      - name: Set output variables
+        id: step_output_variables
+        run: |
+          team=$(yq '.team_uniform_name' "$GITHUB_WORKSPACE/infra/projects.yaml")
+          echo "team_name=$team" >> $GITHUB_OUTPUT
+          
+          gar_project_id="artifact-registry-5n"
+          service_account="gh-actions-${team}@${gar_project_id}.iam.gserviceaccount.com"
+          echo "service_account=$service_account" >> $GITHUB_OUTPUT
+          
+          base_registry="europe-north1-docker.pkg.dev/${gar_project_id}/dapla-felles-docker/automation/source-data"
+          echo "base_registry=$base_registry" >> $GITHUB_OUTPUT
+          
+          team_registry="europe-north1-docker.pkg.dev/${gar_project_id}/${team}-docker/automation/source-data"
+          echo "team_registry=$team_registry" >> $GITHUB_OUTPUT
+          
+          gar_project_number="848539402404"
+          workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
+          echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
+          
+          # Download version.yaml, this is needed when the workflow is ran from outside the repo
+          curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/main/version.yaml
+          base_image_version=$(yq e '.version' version.yaml)
+          echo "base_image_version=$base_image_version" >> $GITHUB_OUTPUT
+      - name: Fetch main
+        run: |
+          if [ "$(git branch --show-current)" != "main" ]; then
+            echo "Current branch is not main"
+            git fetch origin main:main
+          fi
+      - name: Sources deleted
+        id: check_all_sources_deleted
+        run: |
+          # This script handles the special case of allowing automatic apply when deleting the last source.
+          # The 'test' job is required to pass for automatic apply to run. And since 'test' utilizes a matrix strategy
+          # it requires at least one element in it's matrix, for it to execute. When there are no source folders,
+          # the matrix used by tests will be empty. This script sets an output that is used to allow
+          # tests to pass, when the last source is deleted.
+          
+          automation_directory="automation/source-data"
+          echo "all_sources_deleted=false" >> $GITHUB_OUTPUT
+          set +e
+          source_folders=$(ls $automation_directory/* 2>/dev/null)
+          set -e
+          # If no source folder exists (automation/source-data/{ENV}/{SOURCE_FOLDER})
+          # Then no source is configured in the current branch.
+          if [ -z "$source_folders" ]; then
+            # Lists all files that have been deleted compared to main in the $automation_directory/{ENV} directory
+            deleted_files=$(git diff --name-only --diff-filter=D main -- "$automation_directory"/*)
+  
+            if [ -n "$deleted_files" ]; then
+              echo "No source folder is present in the current branch, and a source folder has been deleted."
+              echo "all_sources_deleted=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Create matrix
+        id: step_create_matrix
+        run: |
+          MATRIX="["
+          first=true
+          
+          for folder in automation/source-data/*/*; do
+            if [ -d "$folder" ]; then
+              [ "$first" = false ] && MATRIX+=','
+              env=$(basename "$(dirname "$folder")")
+              source=$(basename "$folder")
+              MATRIX+="\"$source,$env\""
+              first=false
+            fi
+          done
+          MATRIX+="]"
+               
+          # If all sources have been deleted (indicated by 'all_sources_deleted' output being 'true'), 
+          # we add the special keyword 'all_sources_deleted' to the matrix to ensure the 'test' job is triggered.
+          if [ "${{ steps.check_all_sources_deleted.outputs.all_sources_deleted }}" == "true" ]; then
+            MATRIX="[ \"all_sources_deleted\" ]"
+          # Check if the matrix is empty
+          elif [ "$MATRIX" == "[]" ] && [ "$(git branch --show-current)" != "main" ]; then
+              echo "Error: Could not find any sources for Kildomaten. Please verify that your source configuration matches the description in the Dapla manual: https://manual.dapla.ssb.no/automatisering.html#konfigurere-en-kilde"
+              exit 1
+          fi
+          
+          
+          echo "Matrix value: $MATRIX"
+          echo "env_matrix=$MATRIX" >> $GITHUB_OUTPUT
+    outputs:
+      team_name: ${{steps.step_output_variables.outputs.team_name}}
+      service_account: ${{steps.step_output_variables.outputs.service_account}}
+      base_registry: ${{steps.step_output_variables.outputs.base_registry}}
+      team_registry: ${{steps.step_output_variables.outputs.team_registry}}
+      workload_identity_provider: ${{steps.step_output_variables.outputs.workload_identity_provider}}
+      matrix: ${{ steps.step_create_matrix.outputs.env_matrix }}
+      all_sources_deleted: ${{ steps.check_all_sources_deleted.outputs.all_sources_deleted }}
+      base_image_version: ${{steps.step_output_variables.outputs.base_image_version}}
+
+  test:
+    if: ${{ needs.workflow_gatekeeper.outputs.should_run_fetch_sources == 'true' && needs.fetch_sources.outputs.matrix != '[]' }}
+    needs: [fetch_sources]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+
+    steps:
+      - name: Checkout Repository
+        # Skipping all steps when all sources have been deleted.
+        # This allows the 'test' job to finish successfully.
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        uses: actions/checkout@v4
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: Login to registry
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.base_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Pull base image
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
+      - name: Clone test scripts
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        run: |
+          git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+      - name: Run tests for ${{ matrix.source }}
+        if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
+        run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
+          echo "Running test for source: $FOLDER_NAME-$ENV_NAME"
+          docker run -v "$(pwd):/workspace" \
+          -w /workspace \
+          -e ENV_NAME="$ENV_NAME" \
+          -e FOLDER_NAME="$FOLDER_NAME" \
+          ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }} \
+          dapla-source-data-processor-build-scripts/analyze_source_files.sh
+
+  plan:
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: [test]
+    name: Plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ready comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'Auto-apply is ready, approve PR to start'
+            })
+
+  checks:
+    if: ${{ github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'approved' }}
+    needs: [test]
+    name: Check preconditions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is mergeable
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            if (!pr.mergeable) {
+              core.setFailed("PR needs to be approved and mergeable");
+            }
+
+  atlantis_auto_apply:
+    needs: [checks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Wait for plan
+        uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          statuses: |
+            atlantis/plan
+
+      - name: Apply
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number,
+              body: 'atlantis apply'
+            })
+
+      - name: Wait for apply
+        uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
+        with:
+          timeout: 300
+          sleep_time: 5
+          initial_sleep: 10
+          fail_on_destroy: false
+          statuses: |
+            atlantis/apply
+
+  build_and_push:
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.fetch_sources.outputs.all_sources_deleted != 'true' && needs.fetch_sources.outputs.matrix != '[]' }}
+    needs: [ fetch_sources ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: Login to base registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.base_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Pull base image
+        run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
+      - name: Login to team registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ needs.fetch_sources.outputs.team_registry }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+      - name: Build and push image for ${{ matrix.source }}
+        run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
+          echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
+          echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}" > Dockerfile
+          echo "COPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
+          
+          # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
+          SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
+          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
+          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
+
+  deploy_sources:
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch')  && needs.fetch_sources.outputs.matrix != '[]' && github.ref_name == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    needs: [build_and_push, fetch_sources, test]
+    strategy:
+      matrix:
+        source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          token_format: "access_token"
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          version: '>= 363.0.0'
+      - name: 'Output project display name and source name'
+        id: source_metadata
+        run: |
+          MATRIX=${{ matrix.source }}
+          IFS=',' read -r SOURCE_NAME PROJECT_DISPLAY_NAME <<< "$MATRIX"
+          
+          # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
+          SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
+          
+          echo project_display_name=$PROJECT_DISPLAY_NAME >> $GITHUB_OUTPUT
+          echo source_name=$SOURCE_NAME >> $GITHUB_OUTPUT
+      - name: 'Output project name'
+        id: get_project_name
+        env:
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+        run: |
+          import os
+          project_display_name = os.getenv("PROJECT_DISPLAY_NAME")
+          environment = project_display_name.split("-")[-1]
+          length_of_environment = len(environment)
+          project_name = project_display_name[:1-length_of_environment]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f'project_name={project_name}', file=fh)
+        shell: python
+      - name: Output project id
+        id: get_project_id
+        run: |
+          project_name=${{steps.get_project_name.outputs.project_name}}
+          project_id=$(gcloud projects list --filter="name:${project_name}" | awk 'NR==2 {print $1}')
+          echo project_id=$project_id >> $GITHUB_OUTPUT
+      - name: Output SA email
+        id: output_sa_email
+        env:
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+        run: |
+          SA_EMAIL="gha-kildomaten-deploy-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+          echo sa_email=$SA_EMAIL >> $GITHUB_OUTPUT
+      - name: Output dapla_environment
+        id: output_dapla_environment
+        env:
+          PROJECT_DISPLAY_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+        run: |
+          # The last part of PROJECT_DISPLAY_NAME contains the lowercase env name.
+          # This extracts it, convert it to uppercase and set it as the output dapla_environment.
+          LOWERCASE_ENV_SHORT_NAME="${PROJECT_DISPLAY_NAME##*-}"
+          UPPERCASE_ENV_SHORT_NAME="$(echo "$LOWERCASE_ENV_SHORT_NAME" | awk '{print toupper($0)}')"
+          echo dapla_environment=$UPPERCASE_ENV_SHORT_NAME >> $GITHUB_OUTPUT
+      - name: Output processor and gcp source name
+        id: output_processor_and_source_name
+        env:
+          SOURCE_NAME: ${{ steps.source_metadata.outputs.source_name }}
+        run: |
+          # The image and processor name uses source name with dash instead of underscore.
+          GCP_SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
+          # Processor name is prefixed with 'source-' and has the postfix '-processor'
+          PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
+          echo processor_name=$PROCESSOR_NAME >> $GITHUB_OUTPUT
+          echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
+      - id: "auth-project-sa"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.1.1"
+        with:
+          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
+          service_account: ${{steps.output_sa_email.outputs.sa_email}}
+          token_format: "access_token"
+      - uses: 'google-github-actions/deploy-cloudrun@v2'
+        env:
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+          ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
+          TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
+          DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
+          GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
+          PROCESSOR_NAME: ${{ steps.output_processor_and_source_name.outputs.processor_name }}
+        with:
+          image: '${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}'
+          service: ${{ env.PROCESSOR_NAME }}
+          project_id: ${{ env.PROJECT_ID }}
+          region: 'europe-north1'
+          env_vars: |
+            DAPLA_ENVIRONMENT=${{ env.DAPLA_ENVIRONMENT }}
+            DAPLA_REGION=CLOUD_RUN
