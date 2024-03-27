@@ -10,9 +10,9 @@ cd /workspace/dapla-source-data-processor-build-scripts/tests
 python -m pip install -r requirements.txt
 # Run pytests
 pytest
-echo " ## No errors found by pytest"
+echo "## No errors found by pytest"
 # Check code with pyflakes
 cd /workspace/automation/source-data/$ENV_NAME/$FOLDER_NAME
 echo "## Checking code with pyflakes: ${FOLDER_NAME} in environment:${ENV_NAME}"
 pyflakes process_source_data.py
-echo " ## No errors found by pyflakes"
+echo "## No errors found by pyflakes"
