@@ -45,7 +45,7 @@ Then each Cloud Run instance will have a new revision created using the newly pu
 
 When triggered by workflow dispatch, the action will perform the same operations as a push to the main branch. This
 event is primarily used to force an update of the base image version, without making changes to the configuration or
-script of a source.
+script of a source. The [trigger-kildomaten](https://github.com/statisticsnorway/terraform-ssb-dapla-teams/blob/main/tools/trigger-kildomaten.sh) script can be used to trigger this event for one or more teams.
 
 ## Bump version action
 
