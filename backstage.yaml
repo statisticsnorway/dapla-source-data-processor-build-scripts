@@ -12,7 +12,7 @@ metadata:
   annotations:
     github.com/project-slug: statisticsnorway/dapla-source-data-processor-build-scripts
 spec:
-  type: service
+  type: scripts
   system: kildomaten
   owner: dapla-stat-developers
   lifecycle: production
