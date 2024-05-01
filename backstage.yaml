@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dapla-source-data-processor-build-scripts
+  title: Kildomaten build scripts
+  description: |
+    Actions and scripts used to build, deploy and test images used by the Kildomaten service.
+  tags:
+    - python
+    - pipeline
+    - bash
+  annotations:
+    github.com/project-slug: statisticsnorway/dapla-source-data-processor-build-scripts
+spec:
+  type: scripts
+  system: kildomaten
+  owner: dapla-stat-developers
+  lifecycle: production
