@@ -83,7 +83,7 @@ jobs:
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
           
           # Download version.yaml, this is needed when the workflow is ran from outside the repo
-          curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/main/version.yaml
+          curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/ack-immediately/version.yaml
           base_image_version=$(yq e '.version' version.yaml)
           echo "base_image_version=$base_image_version" >> $GITHUB_OUTPUT
       - name: Fetch main
