@@ -2,6 +2,15 @@ name: Kildomaten
 
 on:
   workflow_call:
+    inputs:
+      version-override:
+        description: 'Override a base image version'
+        default: ''
+        required: false
+        type: string
+
+env:
+  VERSION_OVERRIDE: ${{ inputs.version-override || '' }}
 
 permissions:
   contents: "read"
@@ -82,10 +91,13 @@ jobs:
           workload_identity_provider="projects/${gar_project_number}/locations/global/workloadIdentityPools/gh-actions/providers/gh-actions"
           echo "workload_identity_provider=$workload_identity_provider" >> $GITHUB_OUTPUT
           
-          # Download version.yaml, this is needed when the workflow is ran from outside the repo
-          curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/main/version.yaml
-          base_image_version=$(yq e '.version' version.yaml)
-          echo "base_image_version=$base_image_version" >> $GITHUB_OUTPUT
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            base_image_version="$VERSION_OVERRIDE"
+          else
+            curl -o version.yaml https://raw.githubusercontent.com/statisticsnorway/dapla-source-data-processor-build-scripts/ack-immediately/version.yaml
+            base_image_version=$(yq e '.version' version.yaml)
+          fi
+          echo "base_image_version=$base_image_version" >> "$GITHUB_OUTPUT"
       - name: Fetch main
         run: |
           if [ "$(git branch --show-current)" != "main" ]; then
