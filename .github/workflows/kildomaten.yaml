@@ -223,7 +223,7 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
           echo "Running test for source: $FOLDER_NAME-$ENV_NAME"
-          docker run -v "$(pwd):/workspace" \
+          docker run -v "$(pwd):/workspace:rw" \
           -w /workspace \
           -e ENV_NAME="$ENV_NAME" \
           -e FOLDER_NAME="$FOLDER_NAME" \
