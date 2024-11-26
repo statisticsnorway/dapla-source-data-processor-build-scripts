@@ -4,6 +4,7 @@
 
 # Exit on error
 set -e
+set -x
 
 python -m venv env
 source ./env/bin/activate
