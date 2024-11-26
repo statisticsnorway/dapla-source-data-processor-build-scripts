@@ -205,7 +205,7 @@ jobs:
       - name: Clone test scripts
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
-          git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+          git clone -b v3.0.1 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
       - name: Run tests for ${{ matrix.source }}
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
