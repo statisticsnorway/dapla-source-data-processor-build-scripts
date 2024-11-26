@@ -6,8 +6,8 @@
 set -e
 set -x
 
-python -m venv env
-source ./env/bin/activate
+python -m venv .venv
+source ./venv/bin/activate
 
 # Install test requirements
 cd /workspace/dapla-source-data-processor-build-scripts/tests
