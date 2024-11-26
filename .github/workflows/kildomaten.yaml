@@ -8,9 +8,15 @@ on:
         default: ''
         required: false
         type: string
+      build-scripts-version-main:
+        description: "Use the main branch of build scripts (used for testing)"
+        type: string
+        required: false
+        default: "false"
 
 env:
   VERSION_OVERRIDE: ${{ inputs.version-override || '' }}
+  BUILD_SCRIPT_VERSION_MAIN: ${{ inputs.build-scripts-version-main || '' }}
 
 permissions:
   contents: "read"
@@ -205,7 +211,12 @@ jobs:
       - name: Clone test scripts
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
-          git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+          if [[ ${{env.BUILD_SCRIPT_VERSION_MAIN}} == "true" ]]
+          then
+            git clone https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+          else
+            git clone -b v3.0.0 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+          fi
       - name: Run tests for ${{ matrix.source }}
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
         run: |
