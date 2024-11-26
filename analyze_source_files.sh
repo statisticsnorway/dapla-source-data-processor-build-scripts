@@ -6,6 +6,8 @@
 set -e
 set -x
 
+ls -la
+whoami
 python -m venv .venv
 source ./venv/bin/activate
 
