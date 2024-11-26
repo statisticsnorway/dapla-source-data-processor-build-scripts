@@ -7,7 +7,7 @@ set -e
 set -x
 
 # Source packages from base image build
-source /opt/venv/bin/activate
+source /opt/pysetup/.venv/bin/activate
 
 # Install test requirements
 cd /workspace/dapla-source-data-processor-build-scripts/tests
