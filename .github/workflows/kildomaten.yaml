@@ -360,12 +360,16 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - id: "auth"
+        
+      - name: Debug OIDC Claims
+        uses: github/actions-oidc-debugger@main
+          
+      - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v2"
+        uses: "google-github-actions/auth@v2.1.10"
         with:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
-          service_account: ${{ needs.fetch_sources.outputs.service_account }}
+          service_account: ${{steps.output_sa_email.outputs.sa_email}}
           token_format: "access_token"
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
@@ -429,13 +433,6 @@ jobs:
           PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
           echo processor_name=$PROCESSOR_NAME >> $GITHUB_OUTPUT
           echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
-      - id: "auth-project-sa"
-        name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v2.1.10"
-        with:
-          workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
-          service_account: ${{steps.output_sa_email.outputs.sa_email}}
-          token_format: "access_token"
       - uses: 'google-github-actions/deploy-cloudrun@v2'
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
