@@ -431,7 +431,7 @@ jobs:
           echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v1"
+        uses: "google-github-actions/auth@v2.1.10"
         with:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
           service_account: ${{steps.output_sa_email.outputs.sa_email}}
