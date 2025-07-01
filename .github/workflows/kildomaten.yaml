@@ -371,6 +371,7 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
         with:
           version: '>= 363.0.0'
+          install_components: 'alpha'
       - name: 'Output project display name and source name'
         id: source_metadata
         run: |
@@ -436,7 +437,7 @@ jobs:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
           service_account: ${{steps.output_sa_email.outputs.sa_email}}
           token_format: "access_token"
-      - uses: 'google-github-actions/deploy-cloudrun@v2'
+      - name: Deploy
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
@@ -444,11 +445,10 @@ jobs:
           DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           PROCESSOR_NAME: ${{ steps.output_processor_and_source_name.outputs.processor_name }}
-        with:
-          image: '${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}'
-          service: ${{ env.PROCESSOR_NAME }}
-          project_id: ${{ env.PROJECT_ID }}
-          region: 'europe-north1'
-          env_vars: |
-            DAPLA_ENVIRONMENT=${{ env.DAPLA_ENVIRONMENT }}
-            DAPLA_REGION=CLOUD_RUN
+        run: |
+          gcloud alpha run worker-pools update $PROCESSOR_NAME \
+            --region="europe-north1" \
+            --project="${PROJECT_ID}" \
+            --container="consumer" \
+            --image="${TEAM_REGISTRY}/${GCP_SOURCE_NAME}:${ENV_NAME}"
+            --update-env-vars=DAPLA_ENVIRONMENT=${DAPLA_ENVIRONMENT},DAPLA_REGION=CLOUD_RUN
