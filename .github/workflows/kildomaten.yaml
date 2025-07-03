@@ -371,7 +371,7 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
         with:
           version: '>= 363.0.0'
-          install_components: 'alpha'
+          install_components: 'beta'
       - name: 'Output project display name and source name'
         id: source_metadata
         run: |
@@ -446,7 +446,7 @@ jobs:
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           PROCESSOR_NAME: ${{ steps.output_processor_and_source_name.outputs.processor_name }}
         run: |
-          gcloud alpha run worker-pools update $PROCESSOR_NAME \
+          gcloud beta run worker-pools deploy $PROCESSOR_NAME \
             --region="europe-north1" \
             --project="${PROJECT_ID}" \
             --container="consumer" \
