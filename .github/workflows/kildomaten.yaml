@@ -371,7 +371,6 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
         with:
           version: '>= 363.0.0'
-          install_components: 'beta'
       - name: 'Output project display name and source name'
         id: source_metadata
         run: |
@@ -427,8 +426,8 @@ jobs:
           # The image and processor name uses source name with dash instead of underscore.
           GCP_SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           # Processor name is prefixed with 'source-' and has the postfix '-processor'
-          PROCESSOR_NAME="source-${SOURCE_NAME}-processor"
-          echo processor_name=$PROCESSOR_NAME >> $GITHUB_OUTPUT
+          SCALER_NAME="source-${SOURCE_NAME}-scaler"
+          echo scaler_name=$SCALER_NAME >> $GITHUB_OUTPUT
           echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
@@ -437,18 +436,18 @@ jobs:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
           service_account: ${{steps.output_sa_email.outputs.sa_email}}
           token_format: "access_token"
-      - name: Deploy
+      - uses: 'google-github-actions/deploy-cloudrun@v2'
         env:
           PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
           ENV_NAME: ${{ steps.source_metadata.outputs.project_display_name }}
           TEAM_REGISTRY: ${{ needs.fetch_sources.outputs.team_registry}}
           DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
-          PROCESSOR_NAME: ${{ steps.output_processor_and_source_name.outputs.processor_name }}
-        run: |
-          gcloud beta run worker-pools deploy $PROCESSOR_NAME \
-            --region="europe-north1" \
-            --project="${PROJECT_ID}" \
-            --container="consumer" \
-            --image="${TEAM_REGISTRY}/${GCP_SOURCE_NAME}:${ENV_NAME}"
-            --update-env-vars=DAPLA_ENVIRONMENT=${DAPLA_ENVIRONMENT},DAPLA_REGION=CLOUD_RUN
+          SCALER_NAME: ${{ steps.output_processor_and_source_name.outputs.processor_name }}
+        with:
+          image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/experimental/scaler:feat-scaler-deployer'
+          service: ${{ env.SCALER_NAME }}
+          project_id: ${{ env.PROJECT_ID }}
+          region: 'europe-north1'
+          env_vars: |
+            KILDOMATEN_IMAGE=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}
