@@ -450,5 +450,4 @@ jobs:
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
-          env_vars: |
-            KILDOMATEN_IMAGE=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}
+          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}"' 
