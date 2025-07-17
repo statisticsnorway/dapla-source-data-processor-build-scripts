@@ -224,13 +224,13 @@ jobs:
           MATRIX=${{ matrix.source }}
           IFS=',' read -r FOLDER_NAME ENV_NAME <<< "$MATRIX"
           echo "Running test for source: $FOLDER_NAME-$ENV_NAME"
-          docker run -v "$(pwd):/workspace" \
+          docker run --entrypoint "/bin/bash" -v "$(pwd):/workspace" \
           -u root \
           -w /workspace \
           -e ENV_NAME="$ENV_NAME" \
           -e FOLDER_NAME="$FOLDER_NAME" \
           ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }} \
-          dapla-source-data-processor-build-scripts/analyze_source_files.sh
+          -c dapla-source-data-processor-build-scripts/analyze_source_files.sh
 
   plan:
     if: ${{ github.event_name == 'pull_request' }}
