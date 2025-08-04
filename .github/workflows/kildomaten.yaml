@@ -15,7 +15,7 @@ on:
         default: "false"
 
 env:
-  VERSION_OVERRIDE: ${{ inputs.version-override || 'pr-298' }}
+  VERSION_OVERRIDE: ${{ inputs.version-override || 'pr-309' }}
   BUILD_SCRIPT_VERSION_MAIN: ${{ inputs.build-scripts-version-main || '' }}
 
 permissions:
