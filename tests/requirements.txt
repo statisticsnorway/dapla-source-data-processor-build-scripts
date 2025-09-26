@@ -2,3 +2,4 @@ pytest
 pyflakes
 PyYAML
 dapla-toolbelt
+jedi
