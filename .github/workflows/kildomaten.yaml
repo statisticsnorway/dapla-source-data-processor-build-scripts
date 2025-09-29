@@ -215,7 +215,7 @@ jobs:
           then
             git clone https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
           else
-            git clone -b v3.0.3 https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
+            git clone -b check-sys-exit https://github.com/statisticsnorway/dapla-source-data-processor-build-scripts
           fi
       - name: Run tests for ${{ matrix.source }}
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
