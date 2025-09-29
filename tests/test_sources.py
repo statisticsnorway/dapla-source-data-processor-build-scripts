@@ -64,7 +64,7 @@ class TestProjectStructure(unittest.TestCase):
     def test_source_script_does_not_reference_sys_exit(self):
         pyfiles = [f for f in os.listdir(self.source_folder_path) if ".py" in str(f)]
         for file in pyfiles:
-            with open(file, "r") as f:
+            with open(self.source_folder_path / Path(file), "r") as f:
                 contents = f.read()
                 # Add an import of sys.exit at start to enable reference finding
                 script = jedi.Script(f"from sys import exit as _\n{contents}")
