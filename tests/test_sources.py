@@ -1,11 +1,13 @@
+import os
 import re
 import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+import jedi
 import yaml
-import os
 
 
 class TestProjectStructure(unittest.TestCase):
@@ -58,3 +60,18 @@ class TestProjectStructure(unittest.TestCase):
                 )
             path_to_python_test = tmp_dir / Path("test-plugins/")
             subprocess.run(["pytest"], cwd=path_to_python_test, check=True)
+
+    def test_source_script_does_not_reference_sys_exit(self):
+        pyfiles = [f for f in os.listdir(self.source_folder_path) if ".py" in str(f)]
+        for file in pyfiles:
+            with open(self.source_folder_path / Path(file), "r") as f:
+                contents = f.read()
+                # Add an import of sys.exit at start to enable reference finding
+                script = jedi.Script(f"from sys import exit as _\n{contents}")
+                refs = script.get_references(
+                    line=1, column=17, include_builtins=False, scope="file"
+                )
+                # Keep only references that actually reference sys.exit (get_references returns also locally defined exit functions, etc.)
+                valid_refs = [ref for ref in refs if ref.goto()[0].module_name == "sys"]
+                # If the user has not used sys.exit, our import statement should be the only reference
+                assert len(valid_refs) == 1
