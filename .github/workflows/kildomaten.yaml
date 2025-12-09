@@ -17,6 +17,7 @@ on:
 env:
   VERSION_OVERRIDE: ${{ inputs.version-override || '' }}
   BUILD_SCRIPT_VERSION_MAIN: ${{ inputs.build-scripts-version-main || '' }}
+  COMMIT_SHA: ${{ github.sha }}
 
 permissions:
   contents: "read"
@@ -341,14 +342,14 @@ jobs:
         run: |
           MATRIX=${{ matrix.source }}
           IFS=',' read -r SOURCE_NAME PROJECT_NAME <<< "$MATRIX"
-          echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME"
+          echo "Building image for source: $SOURCE_NAME-$PROJECT_NAME-${{ env.COMMIT_SHA }}"
           echo "FROM ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}" > Dockerfile
           echo "COPY automation/source-data/$PROJECT_NAME/$SOURCE_NAME/. ./plugins" >> Dockerfile
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
-          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
-          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME
+          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
+          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
 
   deploy_sources:
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch')  && needs.fetch_sources.outputs.matrix != '[]' && github.ref_name == github.event.repository.default_branch }}
@@ -449,4 +450,4 @@ jobs:
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
-          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}"' 
+          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}-${{ env.COMMIT_SHA }}"' 
