@@ -115,7 +115,7 @@ jobs:
         id: check_all_sources_deleted
         run: |
           # This script handles the special case of allowing automatic apply when deleting the last source.
-          # The 'test' job is required to pass for automatic apply to run. And since 'test' utilizes a matrix strategy
+          # The 'test' job is required to pass for automatic apply to run. And since 'test' utilizes a s strategy
           # it requires at least one element in it's matrix, for it to execute. When there are no source folders,
           # the matrix used by tests will be empty. This script sets an output that is used to allow
           # tests to pass, when the last source is deleted.
@@ -446,7 +446,7 @@ jobs:
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           SCALER_NAME: ${{ steps.output_processor_and_source_name.outputs.scaler_name }}
         with:
-          image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:main'
+          image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:pr-2'
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
