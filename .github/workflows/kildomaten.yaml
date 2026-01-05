@@ -348,10 +348,8 @@ jobs:
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
-          SHORT_SHA="${GITHUB_SHA::7}"
-          BUILD_TS="$(date -u +'%Y-%m-%d-%H-%M')"
-          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-$SHORT_SHA-$BUILD_TS
-          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-$SHORT_SHA-$BUILD_TS
+          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
+          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
 
   deploy_sources:
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch')  && needs.fetch_sources.outputs.matrix != '[]' && github.ref_name == github.event.repository.default_branch }}
@@ -430,13 +428,8 @@ jobs:
           GCP_SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           # Processor name is prefixed with 'source-' and has the postfix '-processor'
           SCALER_NAME="source-${SOURCE_NAME}-scaler"
-          SHORT_SHA="${GITHUB_SHA::7}"
-          BUILD_TS="$(date -u +'%Y-%m-%d-%H-%M')"
-          
           echo scaler_name=$SCALER_NAME >> $GITHUB_OUTPUT
           echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
-          echo short_sha=$SHORT_SHA >> $GITHUB_OUTPUT
-          echo build_ts=$BUILD_TS >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v2"
@@ -452,11 +445,9 @@ jobs:
           DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           SCALER_NAME: ${{ steps.output_processor_and_source_name.outputs.scaler_name }}
-          SHORT_SHA: ${{ steps.output_processor_and_source_name.outputs.short_sha }}
-          BUILD_TS: ${{ steps.output_processor_and_source_name.outputs.build_ts }}
         with:
           image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:main'
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
-          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}-${{ env.SHORT_SHA }}-${{ env.BUILD_TS}}"' 
+          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}-${{ env.COMMIT_SHA }}"' 
