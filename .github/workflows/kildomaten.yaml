@@ -305,10 +305,26 @@ jobs:
           fail_on_destroy: false
           statuses: |
             atlantis/apply
+  compute_tag:
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.fetch_sources.outputs.all_sources_deleted != 'true' && needs.fetch_sources.outputs.matrix != '[]' }}
+    needs: [ fetch_sources ]
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.tag.outputs.short_sha }}
+      build_ts:  ${{ steps.tag.outputs.build_ts }}
+    steps:
+      - id: tag
+        shell: bash
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          build_ts="$(date -u +'%Y-%m-%d-%H-%M')"
+
+          echo "short_sha=$short_sha"   >> "$GITHUB_OUTPUT"
+          echo "build_ts=$build_ts"     >> "$GITHUB_OUTPUT"
 
   build_and_push:
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.fetch_sources.outputs.all_sources_deleted != 'true' && needs.fetch_sources.outputs.matrix != '[]' }}
-    needs: [ fetch_sources ]
+    needs: [ fetch_sources, compute_tag ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -348,13 +364,15 @@ jobs:
           
           # A common case for Python folders is to use underscore as a separator. This is not allowed in GCP service accounts.
           SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
-          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
-          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ env.COMMIT_SHA }}
+          SHORT_SHA="${GITHUB_SHA::7}"
+          BUILD_TS="$(date -u +'%Y-%m-%d-%H-%M')"
+          docker build . -t ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-${{ needs.compute_tag.outputs.short_sha }}-${{ needs.compute_tag.outputs.build_ts }}
+          docker push ${{ needs.fetch_sources.outputs.team_registry }}/$SOURCE_NAME:$PROJECT_NAME-$SHORT_SHA-$BUILD_TS
 
   deploy_sources:
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch')  && needs.fetch_sources.outputs.matrix != '[]' && github.ref_name == github.event.repository.default_branch }}
     runs-on: ubuntu-latest
-    needs: [build_and_push, fetch_sources, test]
+    needs: [build_and_push, fetch_sources, test, compute_tag]
     strategy:
       matrix:
         source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
@@ -428,6 +446,7 @@ jobs:
           GCP_SOURCE_NAME=$(echo "$SOURCE_NAME" | tr '_' '-')
           # Processor name is prefixed with 'source-' and has the postfix '-processor'
           SCALER_NAME="source-${SOURCE_NAME}-scaler"
+          
           echo scaler_name=$SCALER_NAME >> $GITHUB_OUTPUT
           echo gcp_source_name=$GCP_SOURCE_NAME >> $GITHUB_OUTPUT
       - id: "auth-project-sa"
@@ -445,9 +464,11 @@ jobs:
           DAPLA_ENVIRONMENT: ${{ steps.output_dapla_environment.outputs.dapla_environment }}
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           SCALER_NAME: ${{ steps.output_processor_and_source_name.outputs.scaler_name }}
+          SHORT_SHA: ${{ steps.output_processor_and_source_name.outputs.short_sha }}
+          BUILD_TS: ${{ steps.output_processor_and_source_name.outputs.build_ts }}
         with:
           image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:main'
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
-          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}-${{ env.COMMIT_SHA }}"' 
+          flags: '"--args=-user_image=${{env.TEAM_REGISTRY }}/${{ env.GCP_SOURCE_NAME}}:${{ env.ENV_NAME }}-${{ needs.compute_tag.outputs.short_sha }}-${{ needs.compute_tag.outputs.build_ts }}"' 
