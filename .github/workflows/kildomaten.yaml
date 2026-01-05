@@ -446,7 +446,7 @@ jobs:
           GCP_SOURCE_NAME: ${{ steps.output_processor_and_source_name.outputs.gcp_source_name }}
           SCALER_NAME: ${{ steps.output_processor_and_source_name.outputs.scaler_name }}
         with:
-          image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:pr-2'
+          image: 'europe-north1-docker.pkg.dev/artifact-registry-5n/dapla-felles-docker/automation/scaler:main'
           service: ${{ env.SCALER_NAME }}
           project_id: ${{ env.PROJECT_ID }}
           region: 'europe-north1'
