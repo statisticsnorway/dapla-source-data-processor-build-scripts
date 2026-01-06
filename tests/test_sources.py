@@ -1,3 +1,4 @@
+import ast
 import os
 import re
 import shutil
@@ -75,3 +76,34 @@ class TestProjectStructure(unittest.TestCase):
                 valid_refs = [ref for ref in refs if ref.goto()[0].module_name == "sys"]
                 # If the user has not used sys.exit, our import statement should be the only reference
                 assert len(valid_refs) == 1
+
+    def test_source_script_does_not_reference_dapla_toolbelt(self):
+      """Since the dapla_toolbelt library has been deprecated ensure no scripts use it."""
+            pyfiles = [f for f in os.listdir(self.source_folder_path) if ".py" in str(f)]
+            for file in pyfiles:
+                with open(self.source_folder_path / Path(file), "r") as f:
+                    contents = f.read()
+
+                    # Parse the code into an AST
+                    tree = ast.parse(contents)
+
+                    # Check for dapla_toolbelt imports
+                    dapla_toolbelt_usage = []
+                    module_name = 'dapla_toolbelt'
+
+                    for node in ast.walk(tree):
+                        # Check regular imports: import dapla_toolbelt
+                        if isinstance(node, ast.Import):
+                            for alias in node.names:
+                                if alias.name.startswith(module_name):
+                                    dapla_toolbelt_usage.append(f"import {alias.name}")
+                        # Check from imports: from dapla_toolbelt import ...
+                        elif isinstance(node, ast.ImportFrom):
+                            if node.module and node.module.startswith(module_name):
+                                imports = ', '.join(alias.name for alias in node.names)
+                                dapla_toolbelt_usage.append(f"from {node.module} import {imports}")
+
+                    # Assert that no dapla_toolbelt usage was found
+                    assert len(dapla_toolbelt_usage) == 0, (
+                        f"Found usage of deprecated library dapla_toolbelt: {dapla_toolbelt_usage}"
+                    )
