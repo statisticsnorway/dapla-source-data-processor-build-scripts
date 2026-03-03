@@ -194,7 +194,7 @@ jobs:
       - id: "auth"
         name: "Authenticate to Google Cloud"
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        uses: "google-github-actions/auth@v1.1.1"
+        uses: "google-github-actions/auth@v3"
         with:
           workload_identity_provider: ${{ needs.fetch_sources.outputs.workload_identity_provider }}
           service_account: ${{ needs.fetch_sources.outputs.service_account }}
