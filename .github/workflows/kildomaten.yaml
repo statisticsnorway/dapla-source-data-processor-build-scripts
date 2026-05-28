@@ -1,6 +1,9 @@
 name: Kildomaten
 
 on:
+  push:
+    branches:
+      - update-google-github-aut
   workflow_call:
     inputs:
       version-override:
@@ -45,12 +48,13 @@ jobs:
       - name: Check that diff is in automation/**
         id: check_diff_variables
         run: |
+          current_branch="$(git branch --show-current)"
           # Check for changes in the specific directory compared to the main branch
           CHANGED_FILES=$(git diff --name-only main -- automation/source-data/)
 
           # Check if the variable CHANGED_FILES is not empty
-          if [ "$(git branch --show-current)" == "main" ]; then
-            echo "Running on main branch"
+          if [ "$current_branch" == "main" ] || [ "$current_branch" == "update-google-github-aut" ]; then
+            echo "Running on allowed branch ($current_branch)"
             echo "should_run_fetch_sources=true" >> $GITHUB_OUTPUT
           elif [ -z "$CHANGED_FILES" ]; then
             echo "Error: No changes detected in automation/source-data/ compared to main branch."
