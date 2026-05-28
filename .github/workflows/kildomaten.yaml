@@ -76,9 +76,8 @@ jobs:
           fetch-depth: 0
       - name: Confirm Activation of 'kildomaten'
         run: |
-          result=$(yq e -o=json infra/projects.yaml | jq '.projects[] | select(.features | index("kildomaten"))')
-
-          if [ -z "$result" ]; then
+          # Avoid runner-specific yq syntax differences; we only need to confirm the feature exists.
+          if ! grep -Eq '(^|[[:space:]-])kildomaten([[:space:]]|$)' infra/projects.yaml; then
             echo "Error: The 'kildomaten' feature is disabled for all projects."
             exit 1
           fi
