@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Fetch main
         run: |
@@ -67,7 +67,7 @@ jobs:
     needs: [workflow_gatekeeper]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
       - name: Confirm Activation of 'kildomaten'
@@ -190,7 +190,7 @@ jobs:
         # Skipping all steps when all sources have been deleted.
         # This allows the 'test' job to finish successfully.
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: "auth"
         name: "Authenticate to Google Cloud"
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
@@ -201,7 +201,7 @@ jobs:
           token_format: "access_token"
       - name: Login to registry
         if: ${{ needs.fetch_sources.outputs.all_sources_deleted != 'true' }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         with:
           registry: ${{ needs.fetch_sources.outputs.base_registry }}
           username: "oauth2accesstoken"
@@ -239,7 +239,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ready comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             github.rest.issues.createComment({
@@ -257,7 +257,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check if PR is mergeable
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             const { data: pr } = await github.rest.pulls.get({
@@ -274,7 +274,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Wait for plan
         uses: statisticsnorway/dapla-source-data-processor-build-scripts/.github/actions/wait-for-status@main
@@ -286,7 +286,7 @@ jobs:
             atlantis/plan
 
       - name: Apply
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             github.rest.issues.createComment({
@@ -332,7 +332,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093" # v3.0.0
@@ -341,7 +341,7 @@ jobs:
           service_account: ${{ needs.fetch_sources.outputs.service_account }}
           token_format: "access_token"
       - name: Login to base registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         with:
           registry: ${{ needs.fetch_sources.outputs.base_registry }}
           username: "oauth2accesstoken"
@@ -349,7 +349,7 @@ jobs:
       - name: Pull base image
         run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
       - name: Login to team registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         with:
           registry: ${{ needs.fetch_sources.outputs.team_registry }}
           username: "oauth2accesstoken"
@@ -376,7 +376,7 @@ jobs:
         source: ${{fromJson(needs.fetch_sources.outputs.matrix)}}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093" # v3.0.0
