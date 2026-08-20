@@ -341,7 +341,7 @@ jobs:
           service_account: ${{ needs.fetch_sources.outputs.service_account }}
           token_format: "access_token"
       - name: Login to base registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           registry: ${{ needs.fetch_sources.outputs.base_registry }}
           username: "oauth2accesstoken"
@@ -349,7 +349,7 @@ jobs:
       - name: Pull base image
         run: docker pull ${{ needs.fetch_sources.outputs.base_registry }}/base-image:${{ needs.fetch_sources.outputs.base_image_version }}
       - name: Login to team registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           registry: ${{ needs.fetch_sources.outputs.team_registry }}
           username: "oauth2accesstoken"
